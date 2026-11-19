@@ -4,7 +4,7 @@
 - `progress.md`: estado actual, cómo retomar y siguientes pasos.
 - `decisions.md`: decisiones técnicas con fecha y motivo.
 - `notebooks/01_tone_perfect_pipeline.ipynb`: explicación de cada paso y decisión de Tone Perfect. Si cambian los resultados, regenerarlo y revisar las cifras que cita el texto.
-- `notebooks/02_escalera_dominio.ipynb`: escalera de dominio (AISHELL-3), contexto, HuBERT frente al léxico, contrafactuales y su paso a la app. Mismo criterio: si cambian los resultados, regenerarlo y revisar las cifras del texto.
+- `notebooks/02_escalera_dominio.ipynb` (lo genera `scripts/38_generar_notebook_02.py`): escalera de dominio (AISHELL-3), contexto, HuBERT frente al léxico, contrafactuales y su paso a la app. Mismo criterio: si cambian los resultados, regenerarlo y revisar las cifras del texto.
 
 ## Datos clave
 - Tone Perfect (MSU): 9.839 mp3 + xml de metadatos en `data/raw/toneperfect/` (no versionado). 6 hablantes (FV1-3, MV1-3), 410 sílabas x 4 tonos, balance 25 % por tono. Falta `jiao1_FV3`.

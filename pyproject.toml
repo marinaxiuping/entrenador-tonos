@@ -1,7 +1,7 @@
 [project]
 name = "tonos"
 version = "0.1.0"
-description = "Add your description here"
+description = "Entrenador de tonos del mandarín: clasificación de tonos, API de la app y experimentos del TFM"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -28,9 +28,6 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
-[project.scripts]
-tonos = "tonos:main"
-
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
@@ -49,4 +46,5 @@ dev = [
     "ipykernel>=7.4.0",
     "nbconvert>=7.17.2",
     "nbformat>=5.11.1",
+    "pytest>=9.2.0",
 ]

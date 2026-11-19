@@ -9,7 +9,6 @@ Uso: uv run python scripts/11_analizar_etiquetas_aishell3.py
 
 import argparse
 import re
-from collections import Counter
 from pathlib import Path
 
 import pandas as pd

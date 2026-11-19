@@ -11,6 +11,8 @@ Configuración por variables de entorno (ver .env.example):
                        nativa de la práctica (/api/reference-audio)
   TONOS_LAB_DIR        paquete de la demo "¿quién te corrige?" (35_preparar_laboratorio.py);
                        si no existe, la API funciona sin las rutas /api/lab
+  TONOS_HEAVY_REQUESTS_PER_MINUTE  peticiones por minuto y cliente a /api/resynthesize y
+                       /api/lab/judge, que ocupan la CPU cientos de milisegundos cada una
 
 Arranque: uv run --env-file .env uvicorn tonos.api:app
 """
@@ -34,6 +36,7 @@ from pydantic import BaseModel
 from tonos.f0 import SR
 from tonos.inference import NoVoiceDetected, SpeakerProfile, ToneClassifier
 from tonos.lab import LabRequestError, ToneJudgeLab
+from tonos.rate_limit import SlidingWindowRateLimiter
 from tonos.reference_audio import ReferenceAudioLibrary
 from tonos.resynthesis import resynthesize_with_contour
 
@@ -42,6 +45,7 @@ FRONTEND_DIR = os.environ.get("TONOS_FRONTEND_DIR", "frontend/dist")
 TONE_PERFECT_DIR = os.environ.get("TONOS_TONE_PERFECT_DIR", "data/raw/toneperfect")
 LAB_DIR = os.environ.get("TONOS_LAB_DIR", "models/laboratorio")
 MAX_UPLOAD_BYTES = int(float(os.environ.get("TONOS_MAX_UPLOAD_MB", "5")) * 1024 * 1024)
+HEAVY_REQUESTS_PER_MINUTE = int(os.environ.get("TONOS_HEAVY_REQUESTS_PER_MINUTE", "30"))
 MAX_CALIBRATION_FILES = 12
 MAX_RESYNTHESIS_RATE = 48_000
 
@@ -54,6 +58,7 @@ async def lifespan(app: FastAPI):
     # desplegar solo la práctica.
     app.state.lab = ToneJudgeLab(LAB_DIR) if os.path.isdir(LAB_DIR) else None
     app.state.reference_audio = ReferenceAudioLibrary(TONE_PERFECT_DIR) if os.path.isdir(TONE_PERFECT_DIR) else None
+    app.state.heavy_request_limiter = SlidingWindowRateLimiter(HEAVY_REQUESTS_PER_MINUTE, window_s=60)
     yield
 
 
@@ -69,6 +74,16 @@ def get_lab(request: Request) -> ToneJudgeLab:
     if request.app.state.lab is None:
         raise HTTPException(503, "el laboratorio no está instalado en este servidor")
     return request.app.state.lab
+
+
+def limit_heavy_requests(request: Request) -> None:
+    limiter: SlidingWindowRateLimiter = request.app.state.heavy_request_limiter
+    # Detrás de un proxy en el que uvicorn no confía (--forwarded-allow-ips), request.client
+    # es el proxy y el límite pasa a ser compartido por todos los usuarios.
+    client_key = request.client.host if request.client else "desconocido"
+    if not limiter.allow(client_key):
+        raise HTTPException(429, "demasiadas peticiones seguidas; espera un momento",
+                            headers={"Retry-After": str(int(limiter.window_s))})
 
 
 def get_reference_audio(request: Request) -> ReferenceAudioLibrary:
@@ -195,7 +210,7 @@ def analyze(file: UploadFile = File(...),
     )
 
 
-@router.post("/resynthesize", response_class=Response,
+@router.post("/resynthesize", response_class=Response, dependencies=[Depends(limit_heavy_requests)],
              responses={200: {"content": {"audio/wav": {}}, "description": "Tu grabación con el tono objetivo"}})
 def resynthesize(file: UploadFile = File(...),
                  reference_hz: float = Form(..., gt=0),
@@ -238,7 +253,7 @@ def lab_utterances(lab: ToneJudgeLab = Depends(get_lab)) -> list[dict]:
     return lab.utterance_list()
 
 
-@router.post("/lab/judge", response_model=JudgeResponse)
+@router.post("/lab/judge", response_model=JudgeResponse, dependencies=[Depends(limit_heavy_requests)])
 def lab_judge(request: JudgeRequest, lab: ToneJudgeLab = Depends(get_lab)) -> JudgeResponse:
     """Cambia el tono de una sílaba (o la deja como está) y devuelve el audio y el juicio de cada modelo."""
     try:

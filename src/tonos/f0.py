@@ -85,7 +85,10 @@ def f0_on_frame_grid(f0: np.ndarray, times: np.ndarray, n_samples: int, sr: int 
 
 
 def clean_f0(f0: np.ndarray, max_dev_st: float = 9.0, medfilt: int = 5) -> np.ndarray:
-    """Corrige errores de octava y suaviza.
+    """Corrige errores de octava y suaviza. Enfoque descartado: lo sustituye ``fix_octave_jumps``.
+
+    Se conserva porque la sección 3.1 del notebook 01 lo ejecuta para mostrar por qué se
+    descartó (altera la mitad de los tonos 4 de Tone Perfect).
 
     Frames a más de ``max_dev_st`` semitonos de la mediana de la frase se desplazan ±12 st
     si así vuelven al rango; si no, se descartan (NaN). Después, filtro de mediana sobre

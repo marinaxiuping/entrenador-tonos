@@ -8,7 +8,7 @@ import { clearProfile, loadProfile, saveProfile } from "./profileStorage";
 
 const TABS = [
   { id: "practice", label: "Practicar" },
-  { id: "lab", label: "¿Quién te corrige?" },
+  { id: "lab", label: "¿Quién corrige?" },
   { id: "results", label: "Resultados" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
@@ -29,24 +29,34 @@ export function App() {
 
   return (
     <main className="app">
-      <header>
-        <h1>Entrenador de tonos</h1>
-        <p className="muted">Graba una sílaba y compara tu entonación con la de un hablante nativo.</p>
+      <header className="masthead">
+        <div className="masthead-bar">
+          <span className="label">Entrenador de tonos · mandarín para hispanohablantes</span>
+          <nav className="nav" role="tablist" aria-label="Secciones">
+            {TABS.map((option, index) => (
+              <button
+                key={option.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === option.id}
+                className={tab === option.id ? "selected" : undefined}
+                onClick={() => setTab(option.id)}
+              >
+                <span className="nav-index">{String(index + 1).padStart(2, "0")}</span>
+                {option.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="masthead-title">
+          {/* 声调: «tono» en chino. */}
+          <span className="masthead-hanzi" aria-hidden="true">声调</span>
+          <div>
+            <h1>Cuatro tonos, una sílaba.</h1>
+            <p className="lede">Graba una sílaba en mandarín y compara tu entonación con la de un hablante nativo.</p>
+          </div>
+        </div>
       </header>
-      <nav className="tabs" role="tablist" aria-label="Secciones">
-        {TABS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === option.id}
-            className={tab === option.id ? "selected" : undefined}
-            onClick={() => setTab(option.id)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </nav>
       {tab === "practice" &&
         (profile ? (
           <PracticeStep profile={profile} onRecalibrate={handleRecalibrate} />

@@ -56,11 +56,14 @@ ap.add_argument("--revision", default="fce0375452b1dd6c080ac3248d423d4d037bc831"
 ap.add_argument("--utterances-per-speaker", type=int, default=60, help="igual que el script 33")
 ap.add_argument("--folds", type=int, default=5)
 ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--train-seed", type=int,
+                help="semilla solo de la inicialización y el orden de entrenamiento de las redes; por defecto, --seed. Cambiarla repite el experimento con los mismos folds y datos")
 ap.add_argument("--resamples", type=int, default=2000)
 ap.add_argument("--examples", type=int, default=3)
 ap.add_argument("--jobs", type=int, default=-1)
 ap.add_argument("--out", default="outputs/escalera_dominio/contrafactual_cambio_tono")
 args = ap.parse_args()
+train_seed = args.seed if args.train_seed is None else args.train_seed
 
 CONDITIONS = ["original", "resintesis", "tono_cambiado"]
 MODELS = ["cnn_silaba", "frase", "hubert", "lexico_sin_audio"]
@@ -184,9 +187,9 @@ for fold in range(args.folds):
     if not in_fold.any():
         continue
     train = evaluated & (fold_of != fold)
-    cnn = train_cnn(x_syllable_train[train], labels[train], len(TONES), TrainingConfig(), device, args.seed)
+    cnn = train_cnn(x_syllable_train[train], labels[train], len(TONES), TrainingConfig(), device, train_seed)
     tagger = train_tagger(x_utterance_train, labels, all_bounds[utterance_fold != fold], len(TONES),
-                          TaggerConfig(), device, args.seed)
+                          TaggerConfig(), device, train_seed)
     layer = layer_of_fold[fold]
     x_train = torch.from_numpy(np.load(Path(args.embeddings) / f"layer_{layer:02d}.npy",
                                        mmap_mode="r")[train].astype(np.float32)).to(device)
@@ -240,7 +243,7 @@ predictions = targets.copy()
 for (model, condition), pred in predicted.items():
     predictions[f"pred_{model}_{condition}"] = pred
 predictions.to_parquet(out / "predicciones.parquet", index=False)
-results = {"n_silabas_cambiadas": len(targets), "capa_por_fold": layer_of_fold, "manipulacion": manipulation,
+results = {"n_silabas_cambiadas": len(targets), "seed": args.seed, "train_seed": train_seed, "capa_por_fold": layer_of_fold, "manipulacion": manipulation,
            "tasas": comparison.pivot(index="modelo", columns="metrica", values="tasa").to_dict(orient="index")}
 (out / "metrics.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
 

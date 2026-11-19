@@ -10,12 +10,13 @@ El contorno que se impone para cada tono es el de la sílaba real de entrenamien
 cercana a la media de ese tono: típico, pero natural (no un promedio suavizado).
 
 Salidas en --out (por defecto models/laboratorio/): laboratorio.pt y audio/<frase>.wav.
-Requiere los scripts 15 y 16.
+Requiere los scripts 15, 16 y 31 (de este último sale la capa de HuBERT).
 
 Uso: uv run python scripts/35_preparar_laboratorio.py
 """
 
 import argparse
+import json
 from dataclasses import asdict
 from pathlib import Path
 
@@ -40,7 +41,9 @@ ap.add_argument("--contours", default="data/processed/contornos_aishell3_praat.n
 ap.add_argument("--embeddings", default="data/interim/embeddings/aishell3_chinese-hubert-base")
 ap.add_argument("--model", default="TencentGameMate/chinese-hubert-base")
 ap.add_argument("--revision", default="fce0375452b1dd6c080ac3248d423d4d037bc831")
-ap.add_argument("--layer", type=int, default=10, help="capa elegida en los cinco folds del script 31")
+ap.add_argument("--hubert-metrics", default="outputs/escalera_dominio/aishell3_hubert/metrics.json",
+                help="métricas del script 31, con la capa elegida para cada fold")
+ap.add_argument("--layer", type=int, help="capa de HuBERT; por defecto, la que eligió el script 31 para el fold reservado")
 ap.add_argument("--C", type=float, default=1.0)
 ap.add_argument("--folds", type=int, default=5)
 ap.add_argument("--holdout-fold", type=int, default=0)
@@ -52,6 +55,16 @@ ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--out", default="models/laboratorio")
 args = ap.parse_args()
 
+
+def chosen_hubert_layer(metrics_path: str, holdout_fold: int) -> int:
+    """Capa que el script 31 eligió con validación interna sin ver ``holdout_fold``: la misma
+    selección sin fuga que la de la evaluación."""
+    chosen = json.loads(Path(metrics_path).read_text(encoding="utf-8"))["capa_elegida_por_fold"]
+    return int(chosen[str(holdout_fold)])
+
+
+hubert_layer = args.layer if args.layer is not None else chosen_hubert_layer(args.hubert_metrics, args.holdout_fold)
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 out = Path(args.out)
 (out / "audio").mkdir(parents=True, exist_ok=True)
@@ -62,12 +75,12 @@ table, labels, evaluated, contours = syllables.table, syllables.labels, syllable
 fold_of = speaker_fold_ids(table, args.folds, args.seed)
 train = evaluated & (fold_of != args.holdout_fold)
 bounds = syllables.utterance_bounds()
-print(f"Entrenando sin el fold {args.holdout_fold} ({train.sum()} sílabas) en {device}")
+print(f"Entrenando sin el fold {args.holdout_fold} ({train.sum()} sílabas) en {device}, HuBERT capa {hubert_layer}")
 
 cnn = train_cnn(contour_inputs(contours[train]), labels[train], len(TONES), TrainingConfig(), device, args.seed)
 tagger = train_tagger(syllable_inputs(contours), labels, bounds[fold_of[bounds[:, 0]] != args.holdout_fold],
                       len(TONES), TaggerConfig(), device, args.seed)
-x_train = torch.from_numpy(np.load(Path(args.embeddings) / f"layer_{args.layer:02d}.npy",
+x_train = torch.from_numpy(np.load(Path(args.embeddings) / f"layer_{hubert_layer:02d}.npy",
                                    mmap_mode="r")[train].astype(np.float32)).to(device)
 probe = LinearProbe(len(TONES), args.C).fit(x_train, torch.from_numpy(labels[train]).long().to(device))
 del x_train
@@ -120,7 +133,7 @@ artifact = {
     "n_points": int(contours.shape[1]),
     "cnn": {k: v.cpu() for k, v in cnn.state_dict().items()},
     "tagger": {k: v.cpu() for k, v in tagger.state_dict().items()},
-    "hubert": {"model": args.model, "revision": args.revision, "layer": args.layer, "probe": probe.state_dict()},
+    "hubert": {"model": args.model, "revision": args.revision, "layer": hubert_layer, "probe": probe.state_dict()},
     "lexicon": lexicon,
     "donor_contours": donor_contours,
     "profiles": profiles,

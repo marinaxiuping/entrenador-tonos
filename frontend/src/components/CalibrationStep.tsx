@@ -2,6 +2,7 @@ import { useState } from "react";
 import { calibrate, type SpeakerProfile } from "../api";
 import { CALIBRATION_SYLLABLE, TONES, TONE_NAMES, findSyllable, toneEntry } from "../syllables";
 import { RecordButton } from "./RecordButton";
+import { ToneShape } from "./ToneShape";
 
 const calibrationSyllable = findSyllable(CALIBRATION_SYLLABLE);
 
@@ -34,22 +35,26 @@ export function CalibrationStep({ onCalibrated }: CalibrationStepProps) {
 
   return (
     <section className="card">
-      <h2>1. Calibra tu voz</h2>
+      <p className="kicker">Paso 1 de 2</p>
+      <h2>Calibra tu voz</h2>
       <p>
         Para comparar tu entonación con la de un nativo hace falta conocer tu tono medio. Graba la sílaba{" "}
         <strong>{CALIBRATION_SYLLABLE}</strong> en los cuatro tonos, cada una por separado y con tu voz natural.
       </p>
       <ol className="calibration-list">
         {TONES.map((tone, i) => (
-          <li key={tone}>
-            <span className="syllable">{toneEntry(calibrationSyllable, tone)?.pinyin}</span>
-            <span className="tone-name">T{tone} · {TONE_NAMES[tone]}</span>
+          <li key={tone} className={recordings[i] ? "is-done" : undefined}>
+            <ToneShape tone={tone} />
+            <span className="calibration-tone">
+              <span className="syllable">{toneEntry(calibrationSyllable, tone)?.pinyin}</span>
+              <span className="tone-name">T{tone} · {TONE_NAMES[tone]}</span>
+            </span>
             <RecordButton
               label={recordings[i] ? "Repetir" : "Grabar"}
               onRecorded={(recording) => storeRecording(i, recording)}
               onError={setError}
             />
-            {recordings[i] && <span className="done">✓</span>}
+            <span className="done" aria-label={recordings[i] ? "grabada" : undefined}>{recordings[i] ? "✓" : ""}</span>
           </li>
         ))}
       </ol>

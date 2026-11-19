@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { resynthesize, type SpeakerProfile } from "../api";
+import { AudioPlayer } from "./AudioPlayer";
 
 interface CorrectedVoiceProps {
   recording: Blob;
@@ -31,12 +32,11 @@ export function CorrectedVoice({ recording, profile, targetTone }: CorrectedVoic
 
   return (
     <div className="corrected-voice">
-      <h3>Tu voz con el tono {targetTone}</h3>
       {audioUrl ? (
-        <audio controls autoPlay src={audioUrl} />
+        <AudioPlayer src={audioUrl} autoPlay label={`Tu voz corregida al tono ${targetTone}`} />
       ) : (
         <button type="button" className="secondary" onClick={load} disabled={isLoading}>
-          {isLoading ? "Generando…" : "Escuchar cómo debería sonar"}
+          {isLoading ? "Generando…" : `Escuchar tu voz con el tono ${targetTone}`}
         </button>
       )}
       {error && <p className="error" role="alert">{error}</p>}

@@ -1,0 +1,13 @@
+# Solo entra lo que copia el Dockerfile.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!models/
+!frontend/
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+!data/raw/toneperfect/tone_perfect/
+**/__pycache__/

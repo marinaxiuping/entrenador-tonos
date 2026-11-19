@@ -42,8 +42,11 @@ ap.add_argument("--tp-metrics", default="outputs/cnn_toneperfect/praat/metrics.j
                 help="accuracy de Tone Perfect con hablante no visto (peldaño 0)")
 ap.add_argument("--folds", type=int, default=5)
 ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--train-seed", type=int,
+                help="semilla solo de la inicialización y el orden de entrenamiento de las redes; por defecto, --seed. Cambiarla repite el experimento con los mismos folds y datos")
 ap.add_argument("--out", default="outputs/escalera_dominio/aishell3")
 args = ap.parse_args()
+train_seed = args.seed if args.train_seed is None else args.train_seed
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 out = Path(args.out)
@@ -77,7 +80,7 @@ def out_of_fold_logits(train_size: int | None) -> np.ndarray:
         train_ids = np.flatnonzero(~test)
         if train_size is not None:
             train_ids = rng.choice(train_ids, size=min(train_size, train_ids.size), replace=False)
-        model = train_cnn(x[train_ids], labels[train_ids], len(TONES), config, device, args.seed)
+        model = train_cnn(x[train_ids], labels[train_ids], len(TONES), config, device, train_seed)
         logits[test] = predict_logits(model, x[test], device)
         print(f"  fold {fold}: {train_ids.size} sílabas de entrenamiento, "
               f"accuracy {(logits[test].argmax(1) == labels[test]).mean():.3f}")
@@ -104,7 +107,7 @@ results = {
     "temperatura_tone_perfect": classifier.temperature,
     "n_silabas": int(len(meta)),
     "n_entrenamiento_tamano_tp": int(tone_perfect_size),
-    "entrenamiento": {**asdict(config), "seed": args.seed, "folds": args.folds},
+    "entrenamiento": {**asdict(config), "seed": args.seed, "train_seed": train_seed, "folds": args.folds},
 }
 
 # Las dos variantes de cero disparos solo difieren en calibración: una basta en el desglose.

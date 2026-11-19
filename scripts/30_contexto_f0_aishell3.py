@@ -31,8 +31,11 @@ ap.add_argument("--syllables", default="data/processed/silabas_aishell3_praat.pa
 ap.add_argument("--contours", default="data/processed/contornos_aishell3_praat.npz")
 ap.add_argument("--folds", type=int, default=5)
 ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--train-seed", type=int,
+                help="semilla solo de la inicialización y el orden de entrenamiento de las redes; por defecto, --seed. Cambiarla repite el experimento con los mismos folds y datos")
 ap.add_argument("--out", default="outputs/escalera_dominio/aishell3_contexto")
 args = ap.parse_args()
+train_seed = args.seed if args.train_seed is None else args.train_seed
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 out = Path(args.out)
@@ -52,7 +55,7 @@ def window_logits() -> np.ndarray:
     logits = np.zeros((len(table), len(TONES)), dtype=np.float32)
     for fold in range(args.folds):
         train, test = evaluated & (fold_of != fold), evaluated & (fold_of == fold)
-        model = train_cnn(x[train], labels[train], len(TONES), config, device, args.seed)
+        model = train_cnn(x[train], labels[train], len(TONES), config, device, train_seed)
         logits[test] = predict_logits(model, x[test], device)
         print(f"  fold {fold}: accuracy {(logits[test].argmax(1) == labels[test]).mean():.3f}")
     return logits
@@ -64,7 +67,7 @@ def utterance_logits() -> np.ndarray:
     logits = np.zeros((len(table), len(TONES)), dtype=np.float32)
     for fold in range(args.folds):
         test_bounds = bounds[utterance_fold == fold]
-        model = train_tagger(x, labels, bounds[utterance_fold != fold], len(TONES), config, device, args.seed)
+        model = train_tagger(x, labels, bounds[utterance_fold != fold], len(TONES), config, device, train_seed)
         rows = np.concatenate([np.arange(start, end) for start, end in test_bounds])
         logits[rows] = predict_tagger_logits(model, x, test_bounds, device)
         test = evaluated & (fold_of == fold)
@@ -74,7 +77,7 @@ def utterance_logits() -> np.ndarray:
 
 evaluated_table = table[evaluated].reset_index(drop=True)
 evaluated_labels, evaluated_folds = labels[evaluated], fold_of[evaluated]
-results = {"n_silabas": int(evaluated.sum()), "seed": args.seed, "folds": args.folds,
+results = {"n_silabas": int(evaluated.sum()), "seed": args.seed, "train_seed": train_seed, "folds": args.folds,
            "entrenamiento": {"ventana": asdict(TrainingConfig()), "frase": asdict(TaggerConfig())},
            "modelos": {}}
 for name, compute_logits in [("ventana", window_logits), ("frase", utterance_logits)]:

@@ -123,6 +123,20 @@ class ToneJudgeLab:
                       self._lexicon_verdict(syllable)],
         )
 
+    def utterance_logits(self, waveform: np.ndarray, spans: list[tuple[float, float]],
+                         contours: np.ndarray) -> dict[str, np.ndarray]:
+        """Logits (n_sílabas, n_tonos) de los tres jueces que oyen el audio, para todas las sílabas
+        de una frase de fuera del paquete. La CNN por sílaba deja NaN en las sílabas sin F0."""
+        cnn = np.full((len(contours), len(self.tones)), np.nan)
+        voiced = ~np.isnan(contours).any(axis=1)
+        if voiced.any():
+            cnn[voiced] = predict_logits(self.cnn, contour_inputs(contours[voiced]), self.device)
+        tagger = predict_tagger_logits(self.tagger, syllable_inputs(contours), np.array([[0, len(contours)]]),
+                                       self.device)
+        embeddings = self.encoder.segment_means(waveform, spans)[:, self.hubert_layer].astype(np.float32)
+        hubert = self.probe.logits(torch.from_numpy(embeddings).to(self.device)).cpu().numpy()
+        return {"cnn_silaba": cnn, "frase": tagger, "hubert": hubert}
+
     def _waveform(self, utterance_id: str) -> np.ndarray:
         if utterance_id not in self._waveforms:
             self._waveforms[utterance_id] = load_16k(str(self.audio_dir / f"{utterance_id}.wav"))

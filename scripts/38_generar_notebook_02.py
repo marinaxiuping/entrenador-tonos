@@ -1,22 +1,35 @@
-"""Genera notebooks/02_escalera_dominio.ipynb (se ejecuta después con nbconvert)."""
+"""Genera notebooks/02_escalera_dominio.ipynb sin ejecutar.
 
-import sys
+El texto del notebook cita cifras de los scripts 06, 15, 16 y 29-36: si cambian los
+resultados, hay que revisarlo aquí y regenerarlo. Las celdas se ejecutan después con
+nbconvert, que es lo que deja las salidas en el notebook.
+
+Uso:
+  uv run python scripts/38_generar_notebook_02.py
+  uv run jupyter nbconvert --to notebook --execute --inplace notebooks/02_escalera_dominio.ipynb
+"""
+
+import argparse
 
 import nbformat
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--out", default="notebooks/02_escalera_dominio.ipynb")
+args = ap.parse_args()
+
 cells = []
 
 
-def md(text):
+def add_markdown(text):
     cells.append(new_markdown_cell(text.strip()))
 
 
-def code(text):
+def add_code(text):
     cells.append(new_code_cell(text.strip()))
 
 
-md("""
+add_markdown("""
 # Escalera de dominio: de las sílabas de laboratorio al juez de pronunciación
 
 Continúa [01_tone_perfect_pipeline.ipynb](01_tone_perfect_pipeline.ipynb). Allí los modelos llegan al 98,8–99,0 % con seis nativos que leen sílabas aisladas en estudio, una cifra que no dice cuánto valen en habla real ni si sirven para corregir a un alumno. Este notebook sube esa escalera paso a paso:
@@ -34,20 +47,23 @@ Igual que el 01, el notebook **no vuelve a ejecutar los pasos pesados** (F0 de 1
 uv run python scripts/15_contornos_aishell3.py
 uv run python scripts/16_embeddings_aishell3.py
 uv run python scripts/29_escalera_dominio_aishell3.py
+uv run python scripts/37_curva_hablantes_aishell3.py
 uv run python scripts/30_contexto_f0_aishell3.py
 uv run python scripts/31_hubert_aishell3.py
 uv run python scripts/32_comparar_contexto_aishell3.py
 uv run python scripts/33_contrafactual_f0_plano.py
 uv run python scripts/34_contrafactual_cambio_tono.py
+# semillas 1 y 2 de 29, 30 y 34 con --train-seed y --out outputs/escalera_dominio/semillas/<carpeta>/semilla_<n>
+uv run python scripts/39_resumir_semillas.py
 uv run python scripts/35_preparar_laboratorio.py
 uv run python scripts/36_exportar_resultados.py
 uv run python scripts/06_exportar_guia_tonos.py
 ```
 
-Todo se evaluó con **una sola semilla**. El entrenamiento en GPU no es determinista del todo, así que volver a ejecutar puede mover las cifras en la tercera decimal.
+Los entrenamientos de los scripts 29, 30 y 34 se repitieron con **tres semillas de entrenamiento** (mismos folds y datos, otra inicialización; script 39): las cifras se mueven en milésimas y el orden de los jueces no cambia (sección 7.1). El resto de experimentos usa una semilla.
 """)
 
-code("""
+add_code("""
 import json
 from pathlib import Path
 
@@ -70,7 +86,7 @@ def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 """)
 
-md("""
+add_markdown("""
 ## 1. Por qué una escalera
 
 Un 0,988 con hablante no visto en Tone Perfect solo dice que el modelo distingue cuatro formas de contorno muy marcadas, producidas con cuidado y aisladas. En una app real hay dos saltos: el habla deja de ser de laboratorio y quien habla deja de ser nativo. Mezclarlos impide saber qué rompe qué, así que se miden por separado. El primer peldaño cambia solo el estilo de habla (habla continua leída por nativos) y mantiene a hablantes que pronuncian bien. Así cualquier caída se debe al dominio y no a errores de pronunciación.
@@ -87,7 +103,7 @@ Para atribuir la caída al dominio, la entrada del modelo tiene que construirse 
 Hay una diferencia que no se puede evitar: la referencia del hablante sale de su habla natural, con la distribución de tonos del chino, y no del 25 % por tono de Tone Perfect.
 """)
 
-code("""
+add_code("""
 syllables = pd.read_parquet(DATA / "processed" / "silabas_aishell3_praat.parquet")
 contours_ai = np.load(DATA / "processed" / "contornos_aishell3_praat.npz")["contours"]
 tp = np.load(DATA / "processed" / "contornos_toneperfect_praat.npz", allow_pickle=True)
@@ -117,7 +133,7 @@ for tone in TONES:
     print(f"T{tone}: recorrido (máx - mín) Tone Perfect {a.max() - a.min():.1f} st | AISHELL-3 {b.max() - b.min():.1f} st")
 """)
 
-md("""
+add_markdown("""
 La figura resume el problema antes de entrenar nada. En habla continua las formas se mantienen, pero muy comprimidas: el recorrido del T4 pasa de 10,7 a 2,8 st y el del T2 de 6,7 a 1,0 st (apenas sube), y el T3 pierde la subida final y se queda en un tono bajo descendente (el «medio tercer tono» de los manuales). Un modelo que aprendió las formas exageradas de las sílabas aisladas va a confundir sobre todo lo que se ha aplanado.
 
 ## 3. Peldaño 1: el modelo de la app en habla continua
@@ -131,7 +147,7 @@ La figura resume el problema antes de entrenar nada. En habla continua las forma
 La calibración se mide con la temperatura de Tone Perfect (lo que haría la app) y con una temperatura reajustada en AISHELL-3 para cada fold usando solo los demás folds.
 """)
 
-code("""
+add_code("""
 rung = load_json(OUT / "aishell3" / "metrics.json")
 rows = {"Tone Perfect, hablante no visto (peldaño 0)": {"accuracy": rung["peldano_0_tone_perfect_hablante_no_visto"]}}
 labels = {"cero_disparos": "AISHELL-3, cero disparos (T de Tone Perfect)",
@@ -146,29 +162,50 @@ for key, label in labels.items():
 pd.DataFrame(rows).T
 """)
 
-code("""
+add_code("""
 for name in ["cero_disparos", "en_dominio_completo"]:
     show(OUT / "aishell3" / f"confusion_{name}.png", width=380)
 """)
 
-md("""
+add_markdown("""
 Hay tres lecturas, de más a menos evidente:
 
 1. **El 98,8 % se queda en 56,6 %.** El tono que más sufre es el T2 (recall 0,19): comprimido, su subida no se distingue de un T1 o de un T3.
 2. **El modelo se equivoca con seguridad.** Con la temperatura de Tone Perfect, el ECE es 0,32: de media, su confianza se aleja 32 puntos de lo que acierta, casi siempre por exceso. En una app eso significa decirle a un alumno, con total confianza, que lo ha hecho mal cuando no es así. Reajustar la temperatura lo deja en 0,017, así que **la calibración no viaja entre dominios y hay que rehacerla en cada uno**.
-3. **Más datos no es la solución.** Entrenar en el dominio recupera 18 puntos (0,748 con el tamaño de Tone Perfect), y multiplicar los datos por 14 solo añade 2 más (0,768). El techo de ~0,77 no es de datos, es de **representación**: el contorno de una sílaba sola no contiene la información que falta.
+3. **Más sílabas no es la solución.** Entrenar en el dominio recupera 18 puntos (0,748 con el tamaño de Tone Perfect), y multiplicar las sílabas por 14 con los mismos hablantes solo añade 2 más (0,768). La sección 3.1 mira la otra variable, el número de voces.
 
-### 3.1 Dónde falla
+### 3.1 ¿Y más voces?
+
+`37_curva_hablantes_aishell3.py` entrena con 4, 8, 16 y 32 hablantes de los otros folds (mitad mujeres, mitad hombres, con todas sus sílabas) y evalúa en los hablantes del fold. Los subconjuntos son anidados, para que la diferencia entre dos puntos no dependa de qué hablantes tocan. Entrena dos modelos: la CNN por sílaba de la sección 3 y la CNN + BiGRU sobre la frase de la sección 4, que se adelanta aquí.
 """)
 
-code("""
+add_code("""
+curve = pd.read_csv(OUT / "curva_hablantes" / "resumen.csv")
+display(curve.pivot(index="hablantes", columns="modelo", values=["accuracy_media", "accuracy_desv"]))
+show(OUT / "curva_hablantes" / "curva_hablantes.png", width=520)
+domain = load_json(OUT / "aishell3" / "metrics.json")["condiciones"]
+print(f"Control del script 29 (32 hablantes, sílabas recortadas al tamaño de Tone Perfect): "
+      f"{domain['en_dominio_tamano_tp']['global']['accuracy']:.3f}")
+""")
+
+add_markdown("""
+La curva no se aplana en el rango medido. Cada vez que se duplican los hablantes, la CNN por sílaba gana entre 1,1 y 1,5 puntos (0,730 / 0,745 / 0,756 / 0,768) y la frase entre 1,5 y 2,5 (0,772 / 0,797 / 0,812 / 0,833). La desviación entre folds es de 1-2 puntos, del mismo orden que cada salto, así que un punto aislado no es concluyente, pero la tendencia sí, porque se repite en los cinco folds y en los dos modelos.
+
+Más hablantes también trae más sílabas (de 18.000 a 151.000), así que la curva sola no separa voces de volumen. El control del script 29 sí ayuda a separarlos. Con 32 hablantes y solo 9.839 sílabas se llega a 0,748, más que con 4 hablantes y 18.000 sílabas (0,730). **Con menos sílabas pero más voces se acierta más**: lo que generaliza a un hablante nuevo es la variedad de voces, no la cantidad de sílabas de las mismas voces.
+
+Esto matiza la conclusión de la sección 3. El techo de ~0,77 de la CNN por sílaba no es de volumen de sílabas, pero sí podría subir algo con más voces, al ritmo de ~1,2 puntos por duplicación. Para llegar a lo que logra la frase completa (0,833) harían falta unas 5 duplicaciones más, unas 40 veces más hablantes, si la tendencia se mantuviera, cosa que no se ha medido. El contexto sigue siendo la palanca grande. La curva de la frase es más empinada, así que el modelo con contexto aprovecha mejor cada voz nueva.
+
+### 3.2 Dónde falla
+""")
+
+add_code("""
 breakdown = pd.read_csv(OUT / "aishell3" / "desglose.csv")
 columns = ["n", "cero_disparos", "en_dominio_completo"]
 for factor in ["tono", "duracion_ms", "posicion_en_frase", "tono_siguiente"]:
     display(breakdown[breakdown.factor == factor].set_index("nivel")[columns].rename_axis(factor))
 """)
 
-md("""
+add_markdown("""
 Incluso entrenado en el dominio, el modelo falla más en la **última sílaba de la frase** (0,63 sin sílaba siguiente), en las **sílabas cortas** (0,67 por debajo de 181 ms) y en el **T3** (0,63). Son los tres sitios donde el contexto ayuda a un oyente humano: al final de la frase la declinación y la voz rasposa deforman el contorno, en una sílaba corta apenas hay contorno, y el T3 realizado depende de lo que viene detrás. Eso lleva directamente al siguiente experimento.
 
 ## 4. Contexto sobre el F0
@@ -181,7 +218,7 @@ Incluso entrenado en el dominio, el modelo falla más en la **última sílaba de
 Ninguno de los dos ve la duración, igual que la CNN por sílaba.
 """)
 
-code("""
+add_code("""
 context = load_json(OUT / "aishell3_contexto" / "metrics.json")
 pd.DataFrame({name: {"accuracy": r["global"]["accuracy"], "media entre hablantes": r["accuracy_hablante_media_std"][0],
                      "macro-F1": r["global"]["macro_f1"], "ECE": r["ece"],
@@ -189,7 +226,7 @@ pd.DataFrame({name: {"accuracy": r["global"]["accuracy"], "media entre hablantes
               for name, r in context["modelos"].items()}).T
 """)
 
-md("""
+add_markdown("""
 El contexto ayuda y la ayuda va donde hacía falta. La frase completa sube a 0,833, con el T3 de 0,63 a 0,78, las sílabas cortas de 0,67 a 0,76 y la última de la frase de 0,63 a 0,77 (desglose en la sección 5). Sigue lejos del 98,8 % de laboratorio.
 
 ## 5. HuBERT y una línea base que no oye nada
@@ -199,7 +236,7 @@ El contexto ayuda y la ayuda va donde hacía falta. La frase completa sube a 0,8
 Con 150.000 filas por 768 dimensiones y 325 ajustes, la regresión logística de sklearn era inviable, así que se reimplementó en GPU (`tonos.linear_probe`: mismo objetivo, L-BFGS). Con 300 iteraciones la capa 0, mal condicionada, tardaba unos 20 minutos por capa; con 100 iteraciones la accuracy es la misma (0,9598 frente a 0,9594 en una prueba) y cada ajuste tarda unos 2 s.
 """)
 
-code("""
+add_code("""
 hubert = load_json(OUT / "aishell3_hubert" / "metrics.json")
 layers = pd.read_csv(OUT / "aishell3_hubert" / "accuracy_por_capa.csv", index_col=0).accuracy
 print("capa elegida por fold:", hubert["capa_elegida_por_fold"])
@@ -211,17 +248,17 @@ ax.set_title("Diagnóstico por capa (no se usa para elegir)")
 fig.tight_layout()
 """)
 
-md("""
+add_markdown("""
 Con la capa 10, elegida en los cinco folds, HuBERT llega a **0,966**. Antes de creérselo hace falta una comparación que el resto de la literatura suele omitir. HuBERT codifica sobre todo **qué se dice**, y en chino el carácter casi determina el tono. Así que `32_comparar_contexto_aishell3.py` añade una **línea base léxica sin audio**: el tono más frecuente de cada carácter en los folds de entrenamiento (si el carácter no aparece, el de la sílaba sin tono).
 
 Todas las diferencias llevan intervalos de confianza al 95 % por **bootstrap de hablantes**. La unidad independiente es el hablante, no la sílaba: remuestrear 188.743 sílabas daría intervalos falsamente estrechos. Las diferencias son pareadas, con los mismos hablantes en cada remuestreo.
 """)
 
-code("""
+add_code("""
 pd.read_csv(OUT / "comparacion_contexto" / "comparacion.csv").set_index("modelo")
 """)
 
-code("""
+add_code("""
 print("Solapamiento de errores frase / HuBERT:", load_json(OUT / "comparacion_contexto" / "solapamiento_errores.json"))
 context_breakdown = pd.read_csv(OUT / "comparacion_contexto" / "desglose.csv")
 models = ["lexico_sin_audio", "cnn_silaba", "frase", "hubert"]
@@ -229,7 +266,7 @@ for factor in ["tono", "duracion_ms", "tono_siguiente"]:
     display(context_breakdown[context_breakdown.factor == factor].set_index("nivel")[["n", *models]].rename_axis(factor))
 """)
 
-md("""
+add_markdown("""
 **Sin oír nada se acierta el 93,4 %.** HuBERT queda solo 3 puntos por encima del léxico. La combinación frase + HuBERT no mejora a HuBERT solo, aunque sus errores son bastante distintos (un oráculo que eligiera siempre al que acierta llegaría al 97,9 %).
 
 Hay un indicio de que HuBERT oye algo más que el léxico. Donde el léxico falla por el sandhi (T3 ante T3, realizado como T2), HuBERT se mantiene. Pero no basta: la regla del sandhi también se deduce del carácter siguiente, que HuBERT reconoce. La accuracy no puede separar «oye el tono» de «sabe qué palabra es». Hace falta intervenir sobre el audio.
@@ -244,7 +281,7 @@ Hay un indicio de que HuBERT oye algo más que el léxico. Donde el léxico fall
 Cada frase la clasifica el clasificador de HuBERT del fold que no ha visto a su hablante. La **comprobación de la manipulación** mide con Praat la dispersión del F0 de cada frase en las tres condiciones.
 """)
 
-code("""
+add_code("""
 flat = load_json(OUT / "contrafactual_f0_plano" / "metrics.json")
 print("dispersión del F0 por frase (st, mediana):", flat["dispersion_f0_st_mediana"])
 print("coincidencia de la predicción con el léxico:", flat["coincidencia_con_lexico"])
@@ -252,7 +289,7 @@ display(pd.read_csv(OUT / "contrafactual_f0_plano" / "comparacion.csv").set_inde
 pd.DataFrame(flat["accuracy_por_tono"]).T.rename_axis("tono")
 """)
 
-md("""
+add_markdown("""
 La manipulación funciona: la dispersión del F0 baja de 2,96 a 0,12 st. El vocoder solo cuesta 1,1 puntos. **Con el tono borrado, HuBERT cae 27 puntos, hasta 0,693.** Hay dos conclusiones:
 
 - **HuBERT sí usa el pitch:** 27 puntos dependen de él, así que no es puramente léxico.
@@ -270,7 +307,7 @@ Para una app el dato incómodo es el segundo. Un alumno que leyera una frase sin
 - **Comprobación de la manipulación:** distancia del contorno reextraído al impuesto frente a la distancia al de la resíntesis sin cambios.
 """)
 
-code("""
+add_code("""
 swap = load_json(OUT / "contrafactual_cambio_tono" / "metrics.json")
 print("manipulación:", swap["manipulacion"])
 rates = pd.read_csv(OUT / "contrafactual_cambio_tono" / "comparacion.csv")
@@ -279,12 +316,12 @@ table = rates.pivot(index="modelo", columns="metrica", values="tasa")[
 table.loc[["cnn_silaba", "frase", "hubert", "lexico_sin_audio"]]
 """)
 
-code("""
+add_code("""
 display(rates[rates.metrica == "detecta_cambio"].set_index("modelo")[["tasa", "ic95_inf", "ic95_sup"]])
 pd.read_csv(OUT / "contrafactual_cambio_tono" / "por_par.csv", index_col=0).rename_axis("original -> impuesto")
 """)
 
-code("""
+add_code("""
 order = ["cnn_silaba", "frase", "hubert"]
 names = {"cnn_silaba": "CNN por sílaba", "frase": "CNN + BiGRU", "hubert": "HuBERT"}
 fig, ax = plt.subplots(figsize=(6.5, 3.6))
@@ -300,7 +337,7 @@ ax.set_title("Cuanto más acierta con nativos, menos errores detecta")
 fig.tight_layout()
 """)
 
-md("""
+add_markdown("""
 **El orden de los modelos se invierte.** La manipulación funciona: el contorno reextraído queda a 0,44 st del impuesto y a 3,04 st del original, y solo 13 sílabas se quedan sin F0.
 
 - **CNN por sílaba:** acierta el 76 % con nativos y detecta el 67,5 % de los cambios. Solo deja pasar el 10 %.
@@ -309,6 +346,25 @@ md("""
 - **Léxico:** por construcción se queda siempre con el tono original (el 2 % restante son sus propios errores).
 
 En todos los pares de tonos, la CNN por sílaba detecta más que la BiGRU y esta más que HuBERT. La debilidad compartida es imponer un T3 (lo comprimido y bajo se confunde fácilmente). Esta es la tesis del trabajo: **en un sistema de corrección, la accuracy sobre habla nativa no mide la validez del juez. Hay que medir si su decisión sigue a la señal que se quiere evaluar.** Para la app, el mejor juez es el más simple, la CNN por sílaba sin contexto, que es la que ya usa. Lo que hay que mejorar es su accuracy en habla continua sin añadirle contexto ni léxico.
+
+""")
+
+add_markdown("""
+### 7.1 ¿Depende de la semilla?
+
+Una crítica obvia a los números de este notebook es que salen de un solo entrenamiento. `29`, `30` y `34` se repitieron con `--train-seed` 1 y 2: mismos folds, mismas frases y mismos contornos donantes, y solo cambian la inicialización y el orden de entrenamiento de las redes. HuBERT no se repite: su clasificador es una regresión logística con L-BFGS, que da lo mismo con cualquier semilla.
+""")
+
+add_code("""
+seeds = pd.read_csv(OUT / "semillas" / "resumen.csv").set_index("metrica")
+display(seeds)
+by_seed = pd.read_csv(OUT / "semillas" / "semillas.csv")
+detection = by_seed[by_seed.metrica.str.endswith("detecta_cambio")].assign(juez=lambda d: d.metrica.str.split(" · ").str[1])
+detection.pivot(index="semilla", columns="juez", values="valor")[["cnn_silaba", "frase", "hubert"]]
+""")
+
+add_markdown("""
+La desviación entre semillas es de milésimas: 0,001 en la accuracy de la CNN por sílaba y de la frase, y como mucho 0,007 en las tasas del contrafactual (lo que deja pasar la frase). Las diferencias entre jueces son de decenas de puntos, así que el orden CNN > frase > HuBERT en detección se repite en las tres semillas. La semilla no explica ningún resultado de este notebook.
 
 ## 8. De los resultados a la app
 
@@ -325,7 +381,7 @@ En la práctica se añadió además una **guía tarareada** (`06_exportar_guia_t
 Se verificó capturando el audio en Edge y midiendo su F0 con Praat (18 de noviembre, no guardado en `outputs/`): error frente al contorno esperado de 0,02 a 0,66 st. El primer timbre (diente de sierra) sonaba a trompeta y se cambió por armónicos que caen como 1/n², que suenan a «mmm» tarareado. La voz nativa de Tone Perfect está pendiente de confirmar su licencia: no aparece en su web y servir los audios en una app desplegada sería redistribuir el corpus.
 """)
 
-code("""
+add_code("""
 guide = load_json(ROOT / "frontend" / "src" / "data" / "tone_guide.json")
 print("duración de la guía por tono (s):", {t: g["duration_s"] for t, g in guide.items()})
 lab_results = load_json(ROOT / "frontend" / "src" / "data" / "resultados.json")
@@ -334,7 +390,7 @@ pd.DataFrame([{"texto": e["frase"], "sílaba": f"{e['silaba']} {e['pinyin']}",
                **{v["juez"]: v["tono"] for v in e["veredictos"]}} for e in lab_results["ejemplos"]])
 """)
 
-md("""
+add_markdown("""
 Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, muestran la variedad real: en uno detectan el cambio la CNN por sílaba y HuBERT, en otro las dos CNN, en otro solo la CNN por sílaba y en el último nadie.
 
 ## 9. Decisiones y límites
@@ -344,6 +400,7 @@ Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, mue
 | Medir el cambio de dominio por peldaños (estilo de habla primero, hablantes no nativos después) | Saber qué rompe qué | Saltar directamente a hispanohablantes |
 | Mismo pipeline de F0 en los dos corpus, F0 sobre la frase completa y rejilla desde t = 0 | Que la caída no se pueda atribuir a una entrada construida de otra forma; Praat necesita contexto en los bordes | Cortar la sílaba antes de calcular el F0; ignorar el desfase de Praat (2-3 frames) |
 | Control en dominio con el tamaño de Tone Perfect | Separar dominio de volumen: los datos aportan 2 puntos | Comparar solo con el modelo entrenado con todo |
+| Curva por número de hablantes con subconjuntos anidados (script 37) | Separar voces de sílabas: con más voces se gana más que con más sílabas | Subconjuntos al azar en cada punto (la diferencia dependería de qué hablantes tocan) |
 | Temperatura reajustada por fold sin fuga | La calibración no viaja: ECE 0,32 → 0,017 | Reutilizar la temperatura de Tone Perfect |
 | IC por bootstrap de hablantes, pareados | La unidad independiente es el hablante | Bootstrap de sílabas (intervalos falsamente estrechos) |
 | Línea base léxica sin audio | Es el atajo que un modelo de habla puede explotar | Comparar modelos solo entre sí |
@@ -353,7 +410,7 @@ Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, mue
 | La CNN por sílaba sigue siendo el juez de la app | Es la que más errores detecta (67,5 %) y la que menos deja pasar (10 %) | HuBERT (97 % con nativos, pero deja pasar el 47 % de los errores) |
 
 **Límites:**
-- **Una sola semilla** en todos los experimentos de esta escalera.
+- **Semillas:** tres semillas de entrenamiento en 29, 30 y 34, con los mismos folds y datos. No se ha variado el reparto de hablantes en folds ni la selección de frases del contrafactual.
 - **Etiquetas y alineamiento:** AISHELL-3 tiene un ~1-2 % de ruido de etiqueta y el alineamiento solo se revisó a mano en 30 bisílabos.
 - **Los contrafactuales no son errores reales.** El contorno trasplantado no trae la coarticulación que tendría el error de un alumno, y WORLD introduce artefactos pequeños (−1 a −2 puntos en el control). El F0 plano no separa léxico, pistas no tonales y sesgo hacia T1.
 - **AISHELL-3 es habla leída de nativos,** no de aprendices: mide lo frágil que es el modelo y si su decisión depende del pitch, no su rendimiento con alumnos.
@@ -362,5 +419,5 @@ Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, mue
 
 nb = new_notebook(cells=cells, metadata={"kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},
                                          "language_info": {"name": "python"}})
-nbformat.write(nb, sys.argv[1])
-print(f"{len(cells)} celdas -> {sys.argv[1]}")
+nbformat.write(nb, args.out)
+print(f"{len(cells)} celdas -> {args.out}")

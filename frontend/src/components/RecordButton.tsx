@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { startRecording, type RecordingSession } from "../audio/recorder";
+import { describeRecordingStartError, startRecording, type RecordingSession } from "../audio/recorder";
 
 interface RecordButtonProps {
   label: string;
   onRecorded: (recording: Blob) => void;
   onError: (message: string) => void;
   disabled?: boolean;
+  // El botón principal de la pantalla va más grande y en color.
+  isProminent?: boolean;
   // Una sílaba aislada dura menos de 1,5 s; el límite evita grabaciones olvidadas.
   maxSeconds?: number;
 }
 
 type RecordingState = "idle" | "recording" | "processing";
 
-export function RecordButton({ label, onRecorded, onError, disabled = false, maxSeconds = 3 }: RecordButtonProps) {
+export function RecordButton({
+  label,
+  onRecorded,
+  onError,
+  disabled = false,
+  isProminent = false,
+  maxSeconds = 3,
+}: RecordButtonProps) {
   const [state, setState] = useState<RecordingState>("idle");
   const sessionRef = useRef<RecordingSession | null>(null);
   const timeoutRef = useRef<number | undefined>(undefined);
@@ -35,7 +44,8 @@ export function RecordButton({ label, onRecorded, onError, disabled = false, max
     setState("processing");
     try {
       onRecorded(await session.stop());
-    } catch {
+    } catch (error) {
+      console.error("Error al procesar la grabación", error);
       onError("No se pudo procesar la grabación. Prueba otra vez.");
     } finally {
       setState("idle");
@@ -45,8 +55,9 @@ export function RecordButton({ label, onRecorded, onError, disabled = false, max
   const start = async () => {
     try {
       sessionRef.current = await startRecording();
-    } catch {
-      onError("No hay acceso al micrófono. Revisa los permisos del navegador.");
+    } catch (error) {
+      console.error("Error al empezar a grabar", error);
+      onError(describeRecordingStartError(error));
       return;
     }
     setState("recording");
@@ -61,7 +72,7 @@ export function RecordButton({ label, onRecorded, onError, disabled = false, max
   return (
     <button
       type="button"
-      className={`record-button ${state}`}
+      className={`record-button ${state}${isProminent ? " prominent" : ""}`}
       onClick={state === "recording" ? stop : start}
       disabled={disabled || state === "processing"}
     >

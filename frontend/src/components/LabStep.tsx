@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { base64ToWavBlob, fetchLabUtterances, judgeSyllable, type JudgeResult, type LabUtterance } from "../api";
 import { JUDGE_ORDER } from "../judges";
 import { TONES, TONE_NAMES, type Tone } from "../syllables";
+import { translateSentence } from "../translations";
+import { AudioPlayer } from "./AudioPlayer";
 import { ContourChart } from "./ContourChart";
+import { StepHeading } from "./StepHeading";
+import { ToneShape } from "./ToneShape";
 import { VerdictTable } from "./VerdictTable";
 
 interface Judgement {
@@ -36,6 +40,7 @@ export function LabStep() {
 
   const utterance = utterances?.find((candidate) => candidate.id === utteranceId);
   const syllable = utterance && syllableIndex !== null ? utterance.syllables[syllableIndex] : undefined;
+  const translation = utterance ? translateSentence(utterance.text) : undefined;
 
   const selectUtterance = (id: string) => {
     setUtteranceId(id);
@@ -85,6 +90,7 @@ export function LabStep() {
         como haría un alumno que se equivoca, y mira qué modelo se da cuenta.
       </p>
 
+      <StepHeading number={1}>Elige una frase</StepHeading>
       <div className="field">
         <label htmlFor="utterance-select">Frase</label>
         <select id="utterance-select" value={utteranceId} onChange={(event) => selectUtterance(event.target.value)}>
@@ -95,7 +101,9 @@ export function LabStep() {
           ))}
         </select>
       </div>
+      {translation && <p className="translation lab-translation">{translation}</p>}
 
+      {utterance && <StepHeading number={2}>Toca la sílaba que quieres cambiar</StepHeading>}
       {utterance && (
         <div className="syllable-row" role="radiogroup" aria-label="Sílaba que se cambia">
           {utterance.syllables.map((option, index) => (
@@ -118,6 +126,7 @@ export function LabStep() {
 
       {syllable && (
         <>
+          <StepHeading number={3}>Cámbiale el tono</StepHeading>
           <p>
             <strong>{syllable.hanzi} {syllable.pinyin}</strong> se dice con el tono {syllable.tone}:{" "}
             {TONE_NAMES[syllable.tone as Tone]}. ¿A qué tono la cambias?
@@ -133,6 +142,7 @@ export function LabStep() {
                 onClick={() => setImposedTone(tone)}
                 disabled={tone === syllable.tone}
               >
+                <ToneShape tone={tone} />
                 T{tone}
                 <span className="tone-name">{tone === syllable.tone ? "original" : TONE_NAMES[tone]}</span>
               </button>
@@ -154,8 +164,11 @@ export function LabStep() {
 
       {judgement && (
         <div className="result">
-          <h3>{judgement.result.imposed_tone === null ? "Frase original" : `Con la sílaba en T${judgement.result.imposed_tone}`}</h3>
-          <audio controls autoPlay src={judgement.audioUrl} />
+          <AudioPlayer
+            src={judgement.audioUrl}
+            autoPlay
+            label={judgement.result.imposed_tone === null ? "Frase original" : `Frase con la sílaba en T${judgement.result.imposed_tone}`}
+          />
           {judgement.result.judged_contour_st && (
             <ContourChart
               userContour={judgement.result.judged_contour_st}

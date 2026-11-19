@@ -47,7 +47,7 @@ TONES = [1, 2, 3, 4]
 SPEAKERS = sorted(df.speaker.unique())
 y = df.tone.to_numpy()
 
-# Mismos hiperparámetros que el baseline de AISHELL-3 (20_baseline_gbm.py) para comparar.
+# Los mismos hiperparámetros que el baseline de bisílabos de AISHELL-3 (script 20, ya retirado).
 params = dict(objective="multiclass", n_estimators=600, learning_rate=0.05, num_leaves=63,
               min_child_samples=40, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
               reg_lambda=1.0, random_state=args.seed, verbose=-1, n_jobs=-1)

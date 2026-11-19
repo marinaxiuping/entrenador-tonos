@@ -1,6 +1,7 @@
 """Datos de la pestaña "Resultados" del frontend: cifras de los experimentos y ejemplos para escuchar.
 
-Las cifras se leen de las salidas de los scripts 29 y 32-34, sin copiarlas a mano. Los
+Las cifras se leen de las salidas de los scripts 29, 32-34 y 39 (variación entre semillas), sin
+copiarlas a mano. Los
 ejemplos se calculan con el mismo juez que la demo en vivo (tonos.lab, paquete del script
 35): sílaba y tono impuesto al azar con semilla, sin elegir los casos que salen bien.
 
@@ -23,6 +24,8 @@ ap.add_argument("--experiments", default="outputs/escalera_dominio")
 ap.add_argument("--lab", default="models/laboratorio")
 ap.add_argument("--syllables", default="data/processed/silabas_aishell3_praat.parquet")
 ap.add_argument("--examples", type=int, default=4)
+ap.add_argument("--seeds-summary", default="outputs/escalera_dominio/semillas/resumen.csv",
+                help="resumen del script 39")
 ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--data-out", default="frontend/src/data/resultados.json")
 ap.add_argument("--audio-out", default="frontend/public/resultados")
@@ -79,6 +82,13 @@ inversion = [{"juez": judge,
               "detecta_ic95": interval(swap.loc[(model, "detecta_cambio")]),
               "acepta": float(swap.loc[(model, "acepta_error"), "tasa"])}
              for model, judge in JUDGE_OF_MODEL.items()]
+seeds = pd.read_csv(args.seeds_summary)
+swap_seed_rates = seeds[seeds.metrica.str.startswith("34 ·")]
+detection_range = seeds.set_index("metrica").loc[[f"34 · {j} · detecta_cambio" for j in ["cnn_silaba", "frase", "hubert"]]]
+# El orden se mantiene en todas las semillas si el peor valor de cada juez supera al mejor del siguiente.
+same_order = bool((detection_range.minimo.to_numpy()[:-1] > detection_range.maximo.to_numpy()[1:]).all())
+seed_variation = {"n": int(len(pd.read_csv(Path(args.seeds_summary).with_name("semillas.csv")).semilla.unique())),
+                  "sd_maxima_contrafactual": round(float(swap_seed_rates.sd.max()), 4), "mismo_orden": same_order}
 swap_metrics = json.loads((experiments / "contrafactual_cambio_tono" / "metrics.json").read_text(encoding="utf-8"))
 
 # --- Ejemplos con el juez de la demo ---
@@ -105,6 +115,7 @@ results = {
     "contexto": context,
     "f0_plano": flat_f0,
     "inversion": inversion,
+    "semillas": seed_variation,
     "ejemplos": examples,
     "n": {"silabas_aishell3": rung["n_silabas"], "hablantes_aishell3": int(pd.read_parquet(args.syllables, columns=["speaker"]).speaker.nunique()),
           "silabas_cambiadas": swap_metrics["n_silabas_cambiadas"]},

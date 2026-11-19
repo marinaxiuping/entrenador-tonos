@@ -39,6 +39,8 @@ class AishellSyllables:
 def utterance_bounds(utterance_ids: np.ndarray) -> np.ndarray:
     """(n_frases, 2) con la fila inicial y final (exclusiva) de cada frase; las filas de una
     misma frase deben ser contiguas."""
+    if utterance_ids.size == 0:
+        return np.empty((0, 2), dtype=int)
     starts = np.flatnonzero(np.r_[True, utterance_ids[1:] != utterance_ids[:-1]])
     return np.stack([starts, np.r_[starts[1:], utterance_ids.size]], axis=1)
 
