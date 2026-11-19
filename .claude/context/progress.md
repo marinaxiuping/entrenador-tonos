@@ -2,8 +2,8 @@
 
 El detalle de cada paso y decisión está en `notebooks/01_tone_perfect_pipeline.ipynb` (Tone Perfect) y `notebooks/02_escalera_dominio.ipynb` (AISHELL-3, contexto, HuBERT, contrafactuales y su paso a la app). Las decisiones con fecha y motivo, en `decisions.md`.
 
-## Estado (actualizado el 2026-11-18)
-Pilar 1 (clasificación) hecho con Tone Perfect y MVP montado en local (backend + frontend). Falta probarlo con micrófono real, desplegarlo y todo lo que depende de las grabaciones de hispanohablantes.
+## Estado (actualizado el 2026-11-19)
+Pilar 1 hecho, escalera de dominio hasta el peldaño 1 cerrada (con 3 semillas) y primer peldaño 2 con errores reales (OMPAL), pendiente de validar el alineamiento. MVP en local con frontend rediseñado e imagen Docker probada. Repo git con 3 commits, sin remoto.
 
 - Datos: Tone Perfect en `data/raw/toneperfect/` (no versionado). Los zips originales, en `data/raw/` (ignorada).
 - F0: Praat + corrección de octava (rango por hablante y `fix_octave_jumps` con bordes de 3 frames y huecos ≥ 9 st). Residuo: 4,4 % de T3 y 3,5 % de T4 con saltos > 6 st que no son de octava.
@@ -43,30 +43,31 @@ Pilar 1 (clasificación) hecho con Tone Perfect y MVP montado en local (backend 
 copy .env.example .env   # si no existe
 cd frontend; npm ci; npm run build; cd ..
 uv run --env-file .env uvicorn tonos.api:app --port 8000   # http://localhost:8000
+uv run pytest
 ```
-Si cambia el F0 o un modelo: relanzar `02`, `03`, `21`, `22`, `23`, `25` (orden en el notebook) y regenerar el notebook revisando las cifras que cita su texto.
+Si cambia el F0 o un modelo: relanzar `02`, `03`, `21`, `22`, `23`, `25` (orden en el notebook 01) y regenerar el notebook. Notebook 02: `uv run python scripts/38_generar_notebook_02.py` y después nbconvert --execute. Para `print` con hanzi en consola: `PYTHONIOENCODING=utf-8`.
 
-## Punto exacto al cerrar el 2026-11-18
-Línea elegida: escalera de dominio como hilo del TFM. Tesis: la accuracy con nativos no mide la validez de un juez de pronunciación (contrafactual de cambio de tono). Hecho hoy: peldaño 1, contexto, HuBERT, contrafactuales, demo y Resultados en el frontend, guía tarareada, voz nativa, notebook 02 y auditoría.
+## Punto exacto al cerrar el 2026-11-19
+Hecho hoy: toda la auditoría (1-19), semillas 0-2 de 29/30/34 (`39`), curva por hablantes (`37`) en el notebook 02, voz nativa probada, traducciones de las frases, dos rediseños del frontend (el vigente es el editorial), Docker probado en local, límite de peticiones, tests, repo git (commits `8eecb12`, `e1f065e`, `f5968a8`; `.gitignore` corregido: `/data/` y `/outputs/` solo en la raíz) y OMPAL (`40`-`43`).
 
-**Al volver, en este orden (decidido por la usuaria):**
-1. Arreglar la auditoría:
-   - Alta: (1-2) zips movidos a `data/raw/` el 2026-11-19; falta que la usuaria cree el repo con los comandos dados. (4) Hecho el 2026-11-19: `15` da salidas idénticas bit a bit; `29` da las mismas cifras (cero disparos idéntico; en dominio 0,748 → 0,747 y 0,768 → 0,768, recall por tono ±0,5 puntos, no determinismo de GPU). Se mantienen las salidas actuales. (5) Hecho: README aclara que la calibración es solo en Tone Perfect.
-   - Media: (6) Hecho el 2026-11-19: licencia, atribución y cita de Tone Perfect en la sección Datos del README. (7) Hecho el 2026-11-19: `38` con argparse (`--out`, por defecto el notebook 02), docstring de uso y documentado en el README. (8) Hecho el 2026-11-19: `--train-seed` en 29, 30 y 34 y semillas 0-2 (`39`, `outputs/escalera_dominio/semillas/resumen.csv`). sd ≤ 0,0012 en accuracy y ≤ 0,0071 en las tasas de 34; orden CNN > frase > HuBERT igual en las tres. Llevado al notebook 02 (sección 7.1, intro y límites) y a Resultados (`36` lee `semillas/resumen.csv`; nota bajo la tabla de la sección 3). (9) Hecho el 2026-11-19: 21 tests en `tests/` (pytest como dependencia de desarrollo) de `f0_on_frame_grid`, `fix_octave_jumps`, `utterance_bounds`, `impose_contour_on_span` y `lexical_tone_baseline`; pasan todos. `utterance_bounds` ya no devuelve una frase falsa con entrada vacía. (10) Hecho el 2026-11-19: `Dockerfile` + `.dockerignore` (lock con torch CPU, setuptools 80.9.0 por pyworld, HuBERT descargado al construir, uid 1000, puerto 7860), con práctica, voz nativa y demo. Probado en local con curl: health, frontend, voz nativa (200/404), analyze, resynthesize, juicio (primero ~10 s, luego 0,15 s). Falta subirlo a Spaces (la usuaria). (11) Hecho el 2026-11-19: `src/tonos/rate_limit.py` (ventana deslizante por IP, en memoria), 30 peticiones/min compartidas entre `/api/resynthesize` y `/api/lab/judge` (`TONOS_HEAVY_REQUESTS_PER_MINUTE`), 429 con `Retry-After`; probado con curl. Detrás del proxy de Spaces la IP puede ser la del proxy (sin comprobar).
-   - Baja: (12) Hecho el 2026-11-19: README con los 19 módulos y los scripts `07` y `37`. (13) Hecho el 2026-11-19: retirados `13`, `14` y `20` (nadie dependía de ellos; `20` no tenía resultados guardados). `clean_f0` se queda solo para la sección 3.1 del notebook 01. `data/interim/f0/` borrado. (14) Hecho el 2026-11-19: fuera `tonos.main()` y `[project.scripts]`, descripción real en `pyproject.toml`, `Counter` quitado de `11`. (15) Hecho el 2026-11-19: `35` lee la capa de `31` (`capa_elegida_por_fold` del fold reservado; `--layer` queda como opción). Da 10, la misma del paquete actual: no hace falta regenerarlo. (16) Hecho el 2026-11-19: `describeRecordingStartError` (permiso, sin micrófono, micro ocupado, sin https, navegador sin MediaRecorder) y `console.error` en `RecordButton`; `startRecording` libera el micrófono si falla `MediaRecorder`. Probado en Edge con Playwright: permiso denegado y grabación normal; sin micrófono no se pudo probar (el portátil tiene uno). (17) Hecho el 2026-11-19: la voz corregida solo se muestra si el tono es incorrecto (decisión de la usuaria). (19) Cerrado el 2026-11-19 sin cambios: las versiones las fija `uv.lock`.
-2. `37` terminado el 2026-11-19 (5 folds, `outputs/escalera_dominio/curva_hablantes/resumen.csv`): 4 / 8 / 16 / 32 hablantes → CNN 0,730 / 0,745 / 0,756 / 0,768 · frase 0,772 / 0,798 / 0,813 / 0,833 (sd entre folds 0,010-0,020). Crece ~1,2 puntos (CNN) y ~2 (frase) por cada duplicación de hablantes, sin saturar. Llevado al notebook 02 (sección 3.1) el 2026-11-19: con 32 hablantes y 9.839 sílabas (control de `29`) se acierta más (0,748) que con 4 hablantes y 18.000 (0,730), así que generalizan las voces, no las sílabas. Falta decidir el multidominio. Continuar el entrenamiento: relanzar `37` (curva por número de hablantes, ~1-1,5 h) y llevar el resultado al notebook 02. Con él, decidir si se prueba entrenamiento multidominio (Tone Perfect + AISHELL-3).
-3. Hecho el 2026-11-19: voz nativa probada en Edge con Playwright (perfil 230 Hz → FV2, 120 Hz → MV2; «Otra voz» recorre las 6; lü3 con ü; jiao1 FV3 muestra el error y «Otra voz» sigue).
-4. 2026-11-19: OMPAL (46 alumnos francófonos, CC BY 4.0, `data/raw/ompal/`, fuente en `sources/`) como peldaño 2 con errores reales: 19.775 sílabas, 13 % con el tono mal por mayoría de 3 anotadores. `40_alinear_ompal.py` (tono esperado con pypinyin + sandhi, MMS_FA, contornos) lanzado en CPU; después `41_jueces_ompal.py` (detección, falsa alarma, AUC, IC por hablante) con los jueces del paquete de la demo. Pendiente: revisar a mano una muestra del alineamiento con alumnos. (audios en `outputs/escalera_dominio/ompal/revision_alineamiento/`, guia.csv para anotar).
-   Resultado de `41` y `43` (2026-11-19, 17.001 sílabas de alumnos, 14,1 % con error): con errores reales la tesis NO se sostiene tal cual. Detecta / falsa alarma / AUC: CNN 0,890 / 0,417 / 0,831 · frase 0,889 / 0,405 / 0,830 · HuBERT 0,854 / 0,250 / 0,859. Falsa alarma con nativos: CNN 0,38, HuBERT 0,10. Kappa con anotadores: entre ellos 0,45, HuBERT 0,35, CNN 0,22. HuBERT detecta MÁS errores de tono cuando consonante y vocal están bien (0,86 frente a 0,78), al revés de lo predicho. Pendiente de la revisión del alineamiento y de decidir con la usuaria cómo reformular la tesis.
-   Camino crítico del TFM: reclutar y grabar hispanohablantes (peldaño 2), con 1-2 nativos que marquen los tonos mal dichos, para validar la tesis con errores reales.
+**Al volver, en este orden:**
+1. **La usuaria revisa el alineamiento de OMPAL** a oído: `outputs/escalera_dominio/ompal/revision_alineamiento/` (20 frases, 223 sílabas; columna `corte_bien` de `guia.csv` con sí / parcial / no). Con el CSV relleno: calcular el % de cortes buenos y si los fallos se concentran en algún grupo.
+   - Si el alineamiento falla: filtrar por score CTC o realinear y repetir `40`, `41`, `43`.
+   - Si está bien: el resultado de OMPAL es real (HuBERT mejor que la CNN con errores reales) y hay que decidir con la usuaria (a) cómo reformular la tesis (p. ej. «ni la accuracy con nativos ni los errores fabricados predicen la validez: hay que validar con errores reales») y (b) qué juez usa la app (la CNN da 42 % de falsas alarmas a alumnos y 38 % a nativos).
+   - Hasta entonces, no tocar el notebook 02, la demo ni Resultados con OMPAL.
+2. Subir el repo a GitHub (la usuaria crea el remoto: `git remote add origin <url>` y `git push -u origin main`).
+3. Pendientes de OMPAL ya hablados: umbral de la app con las 5 particiones del corpus (punto 4 de la propuesta), relación con el curso y las notas de los profesores, ejemplos reales en la app (CC BY 4.0).
+4. Decidir el entrenamiento multidominio (Tone Perfect + AISHELL-3); por la curva de `37` no se espera mucho (solo 6 voces más, en otro estilo). Alternativa: más hablantes de AISHELL-3 (quedan 155 mujeres y 22 hombres, ~25 GB).
+5. Camino crítico del TFM: reclutar y grabar hispanohablantes, con 1-2 nativos que marquen los tonos mal dichos.
 
 ## Siguientes pasos (después de lo anterior)
 1. Probar la app con micrófono real en Chrome, Firefox y Safari (Safari graba en mp4).
-2. Desplegar en Hugging Face Spaces: torch CPU y solo dependencias de inferencia; el laboratorio añade HuBERT (~380 MB).
-3. Perfil de voz: entrenar la CNN con desplazamientos verticales aleatorios para hacerla robusta al error de referencia (hasta 2 st). Sin decidir.
-4. Modo juego (pilar D) y motor adaptativo (pilar E), si da tiempo.
-5. Al terminar el proyecto: preparar la presentación para una sesión de innovación interna, con un asistente que entrena modelos de IA. Enfoque acordado: abrir con la demo «¿Quién te corrige?» y la tabla que se invierte, y contar después la escalera, la línea base léxica y los contrafactuales. Llevar respondido: falta de alumnos reales, fine-tuning de HuBERT frente a aumentación contrafactual, una sola semilla, errores sintéticos frente a reales, y que Tone Perfect es CC BY-NC (no comercial).
+2. Desplegar en Hugging Face Spaces con el `Dockerfile` (reconstruir la imagen: la de `docker images` es anterior al rediseño). Las grabaciones de Tone Perfect hay que subirlas al Space aparte. Comprobar allí la IP real para el límite de peticiones.
+3. Revisar el consejo de Practicar (`src/toneAdvice.ts`, regla propia sin probar con grabaciones reales) y el titular «Cuatro tonos, una sílaba.» (propuesto, sin validar por la usuaria).
+4. Perfil de voz: entrenar la CNN con desplazamientos verticales aleatorios para hacerla robusta al error de referencia (hasta 2 st). Sin decidir.
+5. Modo juego (pilar D) y motor adaptativo (pilar E), si da tiempo.
+6. Al terminar el proyecto: preparar la presentación para una sesión de innovación interna. Enfoque acordado: abrir con la demo «¿Quién corrige?» y la tabla que se invierte, y contar después la escalera, la línea base léxica y los contrafactuales. Llevar respondido: falta de alumnos reales (ahora OMPAL), fine-tuning de HuBERT frente a aumentación contrafactual, errores sintéticos frente a reales, y que Tone Perfect es CC BY-NC (no comercial).
 
 ## Avisos
 - `npm audit`: ReDoS en picomatch (herramienta de build de Vite), sin arreglo salvo bajar a Vite 6. No llega al navegador.
-- La carpeta no es un repositorio git en este momento.
+- Supuesto sin verificar en `43`: la posición del voto en el JSON de OMPAL es siempre el mismo anotador (el README habla de 4 anotadores; el archivo trae 3 votos).
