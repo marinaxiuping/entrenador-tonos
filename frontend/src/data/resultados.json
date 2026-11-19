@@ -1,0 +1,289 @@
+{
+  "escalera": [
+    {
+      "etiqueta": "Tone Perfect, hablante no visto",
+      "accuracy": 0.9877020022359996,
+      "ece": null
+    },
+    {
+      "etiqueta": "AISHELL-3, modelo de la app sin tocar",
+      "accuracy": 0.5661349030162708,
+      "ece": 0.32199075090573975
+    },
+    {
+      "etiqueta": "AISHELL-3, entrenado en el dominio con el tamaño de Tone Perfect",
+      "accuracy": 0.7476780595836667,
+      "ece": 0.0071931220384418085
+    },
+    {
+      "etiqueta": "AISHELL-3, entrenado en el dominio con todo (14 veces más)",
+      "accuracy": 0.7682033240967877,
+      "ece": 0.005641130691577782
+    }
+  ],
+  "contexto": [
+    {
+      "modelo": "cero_disparos_tone_perfect",
+      "etiqueta": "Modelo de la app sin tocar",
+      "accuracy": 0.5661,
+      "ic95": [
+        0.5437,
+        0.5876
+      ]
+    },
+    {
+      "modelo": "cnn_silaba",
+      "etiqueta": "CNN por sílaba",
+      "accuracy": 0.7682,
+      "ic95": [
+        0.7471,
+        0.7873
+      ]
+    },
+    {
+      "modelo": "ventana",
+      "etiqueta": "CNN con la sílaba anterior y la siguiente",
+      "accuracy": 0.8126,
+      "ic95": [
+        0.7937,
+        0.8299
+      ]
+    },
+    {
+      "modelo": "frase",
+      "etiqueta": "CNN + BiGRU sobre la frase",
+      "accuracy": 0.8328,
+      "ic95": [
+        0.8147,
+        0.8495
+      ]
+    },
+    {
+      "modelo": "hubert",
+      "etiqueta": "HuBERT congelado + lineal",
+      "accuracy": 0.9655,
+      "ic95": [
+        0.9602,
+        0.9704
+      ]
+    },
+    {
+      "modelo": "frase_mas_hubert",
+      "etiqueta": "Frase + HuBERT",
+      "accuracy": 0.961,
+      "ic95": [
+        0.9551,
+        0.9665
+      ]
+    },
+    {
+      "modelo": "lexico_sin_audio",
+      "etiqueta": "Léxico, sin audio",
+      "accuracy": 0.9342,
+      "ic95": [
+        0.9295,
+        0.9386
+      ]
+    }
+  ],
+  "f0_plano": [
+    {
+      "condicion": "original",
+      "etiqueta": "Audio original",
+      "accuracy": 0.9638,
+      "ic95": [
+        0.9585,
+        0.9691
+      ]
+    },
+    {
+      "condicion": "resintesis",
+      "etiqueta": "Resíntesis sin tocar el F0",
+      "accuracy": 0.9529,
+      "ic95": [
+        0.9444,
+        0.9603
+      ]
+    },
+    {
+      "condicion": "f0_plano",
+      "etiqueta": "F0 plano (sin tonos)",
+      "accuracy": 0.6932,
+      "ic95": [
+        0.6764,
+        0.7098
+      ]
+    },
+    {
+      "condicion": "lexico_sin_audio",
+      "etiqueta": "Léxico, sin audio",
+      "accuracy": 0.9324,
+      "ic95": [
+        0.9269,
+        0.9377
+      ]
+    }
+  ],
+  "inversion": [
+    {
+      "juez": "cnn_silaba",
+      "accuracy_nativa": 0.7608,
+      "detecta": 0.675,
+      "detecta_ic95": [
+        0.6579,
+        0.6921
+      ],
+      "acepta": 0.0996
+    },
+    {
+      "juez": "frase",
+      "accuracy_nativa": 0.8333,
+      "detecta": 0.5975,
+      "detecta_ic95": [
+        0.575,
+        0.6208
+      ],
+      "acepta": 0.1425
+    },
+    {
+      "juez": "hubert",
+      "accuracy_nativa": 0.9683,
+      "detecta": 0.3096,
+      "detecta_ic95": [
+        0.2879,
+        0.3296
+      ],
+      "acepta": 0.4742
+    },
+    {
+      "juez": "lexico",
+      "accuracy_nativa": 0.925,
+      "detecta": 0.0221,
+      "detecta_ic95": [
+        0.0163,
+        0.0279
+      ],
+      "acepta": 0.925
+    }
+  ],
+  "semillas": {
+    "n": 3,
+    "sd_maxima_contrafactual": 0.0071,
+    "mismo_orden": true
+  },
+  "ejemplos": [
+    {
+      "frase": "系上安全带的模样",
+      "silaba": "系",
+      "pinyin": "jì",
+      "tono_original": 4,
+      "tono_impuesto": 1,
+      "audio_original": "resultados/SSB03390025_original.wav",
+      "audio_cambiado": "resultados/SSB03390025_0_T1.wav",
+      "veredictos": [
+        {
+          "juez": "cnn_silaba",
+          "tono": 1
+        },
+        {
+          "juez": "frase",
+          "tono": 4
+        },
+        {
+          "juez": "hubert",
+          "tono": 1
+        },
+        {
+          "juez": "lexico",
+          "tono": 4
+        }
+      ]
+    },
+    {
+      "frase": "不是什么大事",
+      "silaba": "事",
+      "pinyin": "shì",
+      "tono_original": 4,
+      "tono_impuesto": 2,
+      "audio_original": "resultados/SSB06030382_original.wav",
+      "audio_cambiado": "resultados/SSB06030382_5_T2.wav",
+      "veredictos": [
+        {
+          "juez": "cnn_silaba",
+          "tono": 2
+        },
+        {
+          "juez": "frase",
+          "tono": 2
+        },
+        {
+          "juez": "hubert",
+          "tono": 1
+        },
+        {
+          "juez": "lexico",
+          "tono": 4
+        }
+      ]
+    },
+    {
+      "frase": "九千六百八十三点六",
+      "silaba": "六",
+      "pinyin": "liù",
+      "tono_original": 4,
+      "tono_impuesto": 2,
+      "audio_original": "resultados/SSB06310359_original.wav",
+      "audio_cambiado": "resultados/SSB06310359_8_T2.wav",
+      "veredictos": [
+        {
+          "juez": "cnn_silaba",
+          "tono": 2
+        },
+        {
+          "juez": "frase",
+          "tono": 1
+        },
+        {
+          "juez": "hubert",
+          "tono": 4
+        },
+        {
+          "juez": "lexico",
+          "tono": 4
+        }
+      ]
+    },
+    {
+      "frase": "用户还可以设置狗狗的年龄",
+      "silaba": "置",
+      "pinyin": "zhì",
+      "tono_original": 4,
+      "tono_impuesto": 3,
+      "audio_original": "resultados/SSB06090477_original.wav",
+      "audio_cambiado": "resultados/SSB06090477_6_T3.wav",
+      "veredictos": [
+        {
+          "juez": "cnn_silaba",
+          "tono": 4
+        },
+        {
+          "juez": "frase",
+          "tono": 4
+        },
+        {
+          "juez": "hubert",
+          "tono": 4
+        },
+        {
+          "juez": "lexico",
+          "tono": 4
+        }
+      ]
+    }
+  ],
+  "n": {
+    "silabas_aishell3": 188743,
+    "hablantes_aishell3": 40,
+    "silabas_cambiadas": 2400
+  }
+}

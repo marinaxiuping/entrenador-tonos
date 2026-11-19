@@ -1,0 +1,32 @@
+[
+ {
+  "speaker": "FV1",
+  "gender": "female",
+  "reference_hz": 233.0
+ },
+ {
+  "speaker": "FV2",
+  "gender": "female",
+  "reference_hz": 231.8
+ },
+ {
+  "speaker": "FV3",
+  "gender": "female",
+  "reference_hz": 216.1
+ },
+ {
+  "speaker": "MV1",
+  "gender": "male",
+  "reference_hz": 140.9
+ },
+ {
+  "speaker": "MV2",
+  "gender": "male",
+  "reference_hz": 124.8
+ },
+ {
+  "speaker": "MV3",
+  "gender": "male",
+  "reference_hz": 113.6
+ }
+]
