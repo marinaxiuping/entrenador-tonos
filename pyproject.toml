@@ -1,0 +1,52 @@
+[project]
+name = "tonos"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.163.2",
+    "huggingface-hub>=2.4.0",
+    "joblib>=1.6.0",
+    "librosa>=0.11.0",
+    "lightgbm>=4.7.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.4.6",
+    "pandas>=3.1.1",
+    "praat-parselmouth>=0.4.7",
+    "pyarrow>=26.0.1",
+    "pypinyin>=0.55.0",
+    "python-multipart>=0.0.34",
+    "pyworld==0.3.5",
+    "scikit-learn>=1.9.1",
+    "soundfile>=0.14.0",
+    "torch==2.8.*",
+    "torchaudio==2.8.*",
+    "torchcrepe>=0.0.24",
+    "tqdm>=4.70.1",
+    "transformers>=5.23.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+tonos = "tonos:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "nbconvert>=7.17.2",
+    "nbformat>=5.11.1",
+]

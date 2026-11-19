@@ -1,0 +1,31 @@
+# Decisiones técnicas
+
+| Fecha | Decisión | Motivo |
+|---|---|---|
+| 2026-11-17 | Evaluar dejando fuera un hablante por fold (6 folds en Tone Perfect) | Medir el rendimiento con voces no vistas; con 6 hablantes, reportar también la dispersión entre hablantes |
+| 2026-11-17 | Praat como estimador de F0 | pYIN perdía el 10 % de T4 y recortaba su caída; Praat 0 % de fallos |
+| 2026-11-17 | Corrección de octava: rango por hablante (0,5·Q1–1,5·Q3) + `fix_octave_jumps` con referencia en el tramo más largo en registro, bordes de 3 frames y desplazamiento solo con huecos ≥ 9 st | `clean_f0` altera el 50,7 % de los T4; las versiones previas movían T3 enteros o tramos correctos. Cuesta ~0,2 puntos a la CNN; se acepta porque el contorno lo ve el usuario y lo usará WORLD |
+| 2026-11-17 | Sin duración en las features (`base`) | Atajo que no transfiere: con ella el 34 % de los T3 de MV1 sale como T4 |
+| 2026-11-17 | Temperature scaling con T ajustada con los otros cinco hablantes | Calibración sin fuga de información |
+| 2026-11-17 | CNN con épocas fijas, sin early stopping; capa de HuBERT por validación interna | No elegir el modelo mirando al hablante de test |
+| 2026-11-17 | CNN calibrada para el MVP | A 0,2 puntos de HuBERT (del orden de la variación entre semillas), 113 KB frente a ~380 MB, interpretable |
+| 2026-11-17 | Perfil de voz con *ma* en los cuatro tonos (`/api/calibrate`), backend sin estado | El modelo necesita la media del hablante; con una sola sílaba la referencia se desvía hasta 2 st, pero cuesta solo 0,4 puntos de accuracy (0,984 frente a 0,988); añadir yi, wu o li lo empeora (0,971) porque las vocales altas suben la referencia (`28`, 2026-11-18) |
+| 2026-11-17 | Frontend servido por el backend en el mismo origen, API bajo `/api` | Evita CORS; en desarrollo Vite reenvía `/api` |
+| 2026-11-17 | Grabación con MediaRecorder y conversión a WAV en el navegador | El backend no decodifica webm/opus y así no necesita ffmpeg |
+| 2026-11-17 | Dependencias npm con versión exacta y publicadas hace más de dos semanas | Reproducibilidad y prudencia ante versiones recién publicadas |
+| 2026-11-18 | Práctica con las 408 sílabas de Tone Perfect, solo las 1.243 combinaciones que son palabras reales | Los 397 huecos léxicos aportan poco a un aprendiz |
+| 2026-11-18 | Voz corregida con WORLD (pyworld 0.3.5, la última con rueda para Python 3.11 en Windows) cambiando solo el F0 de los frames con voz, a la frecuencia original | Conserva timbre y registro del usuario; forzar voz en tramos sordos suena a zumbido |
+| 2026-11-18 | Plantilla fija como contorno objetivo, no el modelo personalizado | Con 6 hablantes la plantilla gana (RMSE 2,13 frente a 2,18 st) |
+| 2026-11-18 | AISHELL-3 con el mismo pipeline de F0 que Tone Perfect (Praat, rango por hablante, `fix_octave_jumps` por sílaba, 64 puntos), F0 sobre la frase completa y cortado con el alineamiento | Que la caída al cambiar de dominio no se pueda atribuir a una entrada construida de otra forma; Praat necesita contexto en los bordes |
+| 2026-11-18 | Control en dominio con tantas sílabas como Tone Perfect | Separar el efecto del dominio del de tener 14 veces más datos (resultado: los datos aportan 2 puntos) |
+| 2026-11-18 | HuBERT sobre la frase completa y media de cada capa dentro de la sílaba | Comparar con los modelos de contexto en igualdad: la autoatención ya ve la frase |
+| 2026-11-18 | Regresión logística de HuBERT en GPU (L-BFGS, 100 iteraciones) en vez de sklearn | 325 ajustes sobre 150.000 × 768; con 300 iteraciones la capa 0 tardaba ~20 min por capa; 100 da la misma accuracy (0,9598 frente a 0,9594) |
+| 2026-11-18 | IC por bootstrap de hablantes y línea base léxica en la comparación | La unidad independiente es el hablante; el léxico solo (0,934) es el atajo que un modelo de habla puede explotar sin oír el tono |
+| 2026-11-18 | Contrafactual de F0 plano con control de resíntesis sin tocar el F0 y comprobación de la manipulación con Praat | Separar lo que HuBERT saca del pitch de lo que saca del léxico y de los artefactos de WORLD |
+| 2026-11-18 | Contrafactual de cambio de tono con el contorno de una sílaba real de otro fold, no la media del tono | La media es un prototipo limpio que inflaba la detección de los modelos de F0 (prueba de humo: 96 %) |
+| 2026-11-18 | Demo en vivo con modelos entrenados sin el fold 0 y frases solo de sus hablantes; frases al azar sin mirar los aciertos | Que la demo muestre rendimiento con voces no vistas y no casos escogidos |
+| 2026-11-18 | Contorno impuesto en la demo: la sílaba real de entrenamiento más cercana a la media de cada tono | Típico pero natural; el promedio suavizado sería un prototipo artificial |
+| 2026-11-18 | Pestaña Resultados estática (JSON + wav en el build) y laboratorio opcional en la API | Resultados funciona sin backend pesado; la práctica se puede desplegar sin HuBERT |
+| 2026-11-18 | Modelo para imitar: primero un tarareo sintetizado en el navegador; audio nativo de Tone Perfect solo tras confirmar la licencia | Servir Tone Perfect en una app desplegada es redistribuirlo y no se ha encontrado su licencia |
+| 2026-11-18 | Voz nativa de Tone Perfect en la práctica, servida desde la carpeta del corpus y no versionada; empieza por la voz con referencia más cercana a la del usuario | Licencia CC BY-NC 4.0: permite redistribuir con atribución y sin uso comercial; 284 MB no caben en el repo; imitar es más fácil con una voz de altura parecida |
+| 2026-11-18 | Parar la curva de hablantes (`37`) tras el fold 0 y retomarla después de arreglar la auditoría | Decisión de la usuaria |
