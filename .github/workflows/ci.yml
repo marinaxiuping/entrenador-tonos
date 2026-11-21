@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+      # Mismas versiones que uv.lock, con torch de CPU en lugar de la build de CUDA que fija el
+      # lock (pesa varios GB) y setuptools < 81 para compilar pyworld: igual que el Dockerfile.
+      - name: Instalar dependencias
+        run: |
+          pip install uv==0.12.10
+          uv venv .venv
+          uv export --frozen --no-hashes --no-emit-project --no-header --no-annotate \
+            | grep -vE '^(torch|torchaudio|setuptools)==|^(triton|nvidia-)' > requirements-cpu.txt
+          uv pip install --python .venv --no-deps -r requirements-cpu.txt setuptools==80.9.0
+          uv pip install --python .venv --no-deps \
+            --index-url https://download.pytorch.org/whl/cpu torch==2.8.0+cpu torchaudio==2.8.0+cpu
+          uv pip install --python .venv --no-deps .
+      - name: Tests
+        run: .venv/bin/python -m pytest -q
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # El build incluye la comprobación de tipos (tsc --noEmit).
+      - run: npm run build

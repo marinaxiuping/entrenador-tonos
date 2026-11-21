@@ -1,4 +1,4 @@
-"""Dos análisis de OMPAL sobre las predicciones del script 41.
+"""Tres análisis de OMPAL sobre las predicciones del script 41.
 
 1. Techo humano. Cada sílaba tiene el voto de tres profesores. Se compara a cada anotador con
    los otros dos cuando estos coinciden (referencia sin el propio anotador) y a cada juez con
@@ -8,11 +8,15 @@
 2. Tono frente a segmentos. Cada sílaba trae también si la consonante y la vocal están bien.
    Si un juez decide por la palabra que reconoce, debería dejar pasar más errores de tono
    cuando la sílaba está bien articulada (la palabra se reconoce) que cuando no.
+3. AUC pareada. La AUC de cada juez (con 1 - p(tono esperado)) y la diferencia entre cada par
+   de jueces, con los mismos remuestreos de hablantes: si el intervalo de la diferencia
+   incluye el 0, la ventaja de un juez sobre otro no es concluyente con estos alumnos.
 
 Se usan las sílabas de alumnos evaluadas en el script 41. Intervalos al 95 % por bootstrap de
 hablantes.
 
-Salidas en --out: techo_humano.csv, kappa.csv, segmentos.csv y metrics_analisis.json.
+Salidas en --out: techo_humano.csv, kappa.csv, segmentos.csv, auc_pareada.csv y
+metrics_analisis.json.
 
 Uso: uv run python scripts/43_analizar_ompal.py
 """
@@ -24,9 +28,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import cohen_kappa_score, roc_auc_score
 
-from tonos.evaluation import speaker_bootstrap_accuracy
+from tonos.evaluation import speaker_bootstrap_accuracy, speaker_bootstrap_auc
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--root", default="data/raw/ompal/OMPAL-corpus-main")
@@ -111,13 +115,27 @@ for tone_label, tone_rows in [("tono mal", tone_wrong), ("tono bien", ~tone_wron
                                  "n": int(rows.sum()), **rate.round(4).to_dict()})
 segments = pd.DataFrame(segment_rows)
 
+# --- 3. AUC pareada entre jueces ---
+error_scores = pd.DataFrame({judge: 1 - data[f"p_esperado_{judge}"].to_numpy() for judge in JUDGES})
+boot_auc = speaker_bootstrap_auc(tone_wrong, error_scores, speakers, args.resamples, args.seed)
+point_auc = [roc_auc_score(tone_wrong, error_scores[judge]) for judge in JUDGES]
+auc_rows = [{"comparacion": judge, "auc": point_auc[i], "ic95_bajo": np.percentile(boot_auc[:, i], 2.5),
+             "ic95_alto": np.percentile(boot_auc[:, i], 97.5)} for i, judge in enumerate(JUDGES)]
+for (i, first), (j, second) in combinations(enumerate(JUDGES), 2):
+    difference = boot_auc[:, j] - boot_auc[:, i]
+    auc_rows.append({"comparacion": f"{second} - {first}", "auc": point_auc[j] - point_auc[i],
+                     "ic95_bajo": np.percentile(difference, 2.5), "ic95_alto": np.percentile(difference, 97.5)})
+paired_auc = pd.DataFrame(auc_rows).round(4)
+
 ceiling.to_csv(out / "techo_humano.csv", index=False)
+paired_auc.to_csv(out / "auc_pareada.csv", index=False)
 kappa.to_csv(out / "kappa.csv", index=False)
 segments.to_csv(out / "segmentos.csv", index=False)
 (out / "metrics_analisis.json").write_text(json.dumps({
     "techo_humano_medio": ceiling_summary.to_dict(orient="index"),
     "kappa_medio": kappa_summary.to_dict(),
     "segmentos": segment_rows,
+    "auc_pareada": paired_auc.set_index("comparacion").to_dict(orient="index"),
 }, indent=2, ensure_ascii=False), encoding="utf-8")
 
 print("1. Frente a los otros dos anotadores (media de los tres repartos):")
@@ -126,4 +144,6 @@ print("\nKappa de Cohen medio:")
 print(kappa_summary.to_string())
 print("\n2. Tasa de aviso según el tono y los segmentos (tono mal: detecta; tono bien: falsa alarma):")
 print(segments.pivot_table(index=["tono", "segmentos", "n"], columns="juez", values="tasa").to_string())
+print("\n3. AUC y diferencias pareadas (IC 95 % por hablantes):")
+print(paired_auc.to_string(index=False))
 print(f"\nResultados en {out}/")

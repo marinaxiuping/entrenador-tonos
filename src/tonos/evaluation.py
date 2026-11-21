@@ -7,7 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, recall_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, recall_score, roc_auc_score
 
 from tonos.calibration import brier_score, expected_calibration_error, negative_log_likelihood
 
@@ -119,3 +119,20 @@ def speaker_bootstrap_accuracy(correct: pd.DataFrame, speakers: np.ndarray, n_re
     draws = np.random.default_rng(seed).integers(0, len(syllables_by_speaker),
                                                  size=(n_resamples, len(syllables_by_speaker)))
     return correct_by_speaker[draws].sum(axis=1) / syllables_by_speaker[draws].sum(axis=1)[:, None]
+
+
+def speaker_bootstrap_auc(labels: np.ndarray, scores: pd.DataFrame, speakers: np.ndarray, n_resamples: int,
+                          seed: int) -> np.ndarray:
+    """(n_resamples, modelos): AUC de cada columna de ``scores`` remuestreando hablantes.
+
+    Como en ``speaker_bootstrap_accuracy``, todos los modelos comparten remuestreos: la
+    diferencia entre dos columnas en cada remuestreo da su intervalo pareado.
+    """
+    rows_by_speaker = list(pd.Series(np.arange(len(speakers))).groupby(speakers).indices.values())
+    draws = np.random.default_rng(seed).integers(0, len(rows_by_speaker), size=(n_resamples, len(rows_by_speaker)))
+    values = scores.to_numpy()
+    aucs = np.empty((n_resamples, values.shape[1]))
+    for i, draw in enumerate(draws):
+        rows = np.concatenate([rows_by_speaker[speaker] for speaker in draw])
+        aucs[i] = [roc_auc_score(labels[rows], values[rows, column]) for column in range(values.shape[1])]
+    return aucs

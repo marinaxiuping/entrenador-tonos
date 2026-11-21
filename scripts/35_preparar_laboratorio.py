@@ -6,8 +6,10 @@ hablantes: lo que se ve en la demo es rendimiento con voces no vistas, no memori
 Las frases se eligen al azar (sin mirar qué aciertan los modelos) entre las que tienen
 una longitud cómoda y F0 en todas sus sílabas de tono pleno.
 
-El contorno que se impone para cada tono es el de la sílaba real de entrenamiento más
-cercana a la media de ese tono: típico, pero natural (no un promedio suavizado).
+Los contornos que se imponen son, por tono, --donors sílabas reales de entrenamiento elegidas
+al azar, como en el script 34. La demo usaba antes la más cercana a la media del tono, un
+prototipo que infla la detección de los jueces de F0 (CNN 96 % en la demo frente a 67,5 % en
+el 34): el propio 34 lo había descartado por eso.
 
 Salidas en --out (por defecto models/laboratorio/): laboratorio.pt y audio/<frase>.wav.
 Requiere los scripts 15, 16 y 31 (de este último sale la capa de HuBERT).
@@ -51,6 +53,7 @@ ap.add_argument("--utterances-per-speaker", type=int, default=3)
 ap.add_argument("--min-syllables", type=int, default=5)
 ap.add_argument("--max-syllables", type=int, default=12)
 ap.add_argument("--profile-utterances", type=int, default=60, help="frases para estimar el perfil de cada hablante")
+ap.add_argument("--donors", type=int, default=200, help="contornos donantes reales por tono")
 ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--out", default="models/laboratorio")
 args = ap.parse_args()
@@ -92,12 +95,13 @@ lexicon = {
     "syllables": training.groupby(base_syllable[train]).tone.agg(lambda t: int(t.mode().iloc[0])).to_dict(),
 }
 
-donor_contours = {}
+# Generador propio para que la elección de donantes no cambie las frases que se eligen después.
+donor_rng = np.random.default_rng([args.seed, 1])
+donor_pools = {}
 for tone in TONES:
     candidates = np.flatnonzero(train & (table.tone == tone).to_numpy())
-    mean_contour = contours[candidates].mean(axis=0)
-    nearest = candidates[np.argmin(((contours[candidates] - mean_contour) ** 2).sum(axis=1))]
-    donor_contours[str(tone)] = contours[nearest].round(3).tolist()
+    chosen = donor_rng.choice(candidates, size=min(args.donors, len(candidates)), replace=False)
+    donor_pools[str(tone)] = contours[chosen].round(3).tolist()
 
 # --- Frases de la demo: hablantes del fold reservado ---
 rng = np.random.default_rng(args.seed)
@@ -135,7 +139,7 @@ artifact = {
     "tagger": {k: v.cpu() for k, v in tagger.state_dict().items()},
     "hubert": {"model": args.model, "revision": args.revision, "layer": hubert_layer, "probe": probe.state_dict()},
     "lexicon": lexicon,
-    "donor_contours": donor_contours,
+    "donor_pools": donor_pools,
     "profiles": profiles,
     "utterances": utterances,
     "training": {"holdout_fold": args.holdout_fold, "seed": args.seed, "n_samples": int(train.sum()),

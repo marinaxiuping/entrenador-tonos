@@ -12,7 +12,15 @@ interface Outcome {
   kind: "ok" | "ko" | "neutral";
 }
 
-function outcomeOf(tone: number | null, originalTone: number, imposedTone: number | null): Outcome {
+/** El detector juzga el tono del texto: avisar es acertar solo si se ha cambiado. */
+function detectorOutcome(alert: boolean, imposedTone: number | null): Outcome {
+  if (imposedTone === null) return alert ? { text: "Se equivoca", kind: "ko" } : { text: "Acierta", kind: "ok" };
+  return alert ? { text: "Detecta el cambio", kind: "ok" } : { text: "Deja pasar el error", kind: "ko" };
+}
+
+function outcomeOf(verdict: Verdict, originalTone: number, imposedTone: number | null): Outcome {
+  if (verdict.alert !== null) return detectorOutcome(verdict.alert, imposedTone);
+  const tone = verdict.tone;
   if (tone === null) return { text: "No detecta voz", kind: "neutral" };
   if (imposedTone === null) {
     return tone === originalTone ? { text: "Acierta", kind: "ok" } : { text: "Se equivoca", kind: "ko" };
@@ -34,7 +42,7 @@ export function VerdictTable({ verdicts, originalTone, imposedTone }: VerdictTab
       </thead>
       <tbody>
         {verdicts.map((verdict) => {
-          const outcome = outcomeOf(verdict.tone, originalTone, imposedTone);
+          const outcome = outcomeOf(verdict, originalTone, imposedTone);
           const confidence = verdict.tone !== null ? verdict.probabilities?.[String(verdict.tone)] : undefined;
           return (
             <tr key={verdict.judge}>
@@ -43,9 +51,20 @@ export function VerdictTable({ verdicts, originalTone, imposedTone }: VerdictTab
                 <span className="judge-detail">{JUDGES[verdict.judge].hears}</span>
               </th>
               <td>
-                {verdict.tone !== null ? `T${verdict.tone}` : "—"}
-                {confidence !== undefined && verdict.judge !== "lexico" && (
-                  <span className="judge-detail">{formatPercent(confidence)}</span>
+                {verdict.alert !== null ? (
+                  <>
+                    {verdict.alert ? "Tono mal" : "Tono bien"}
+                    {verdict.error_probability !== null && (
+                      <span className="judge-detail">{formatPercent(verdict.error_probability)} de error</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {verdict.tone !== null ? `T${verdict.tone}` : "—"}
+                    {confidence !== undefined && verdict.judge !== "lexico" && (
+                      <span className="judge-detail">{formatPercent(confidence)}</span>
+                    )}
+                  </>
                 )}
               </td>
               <td>

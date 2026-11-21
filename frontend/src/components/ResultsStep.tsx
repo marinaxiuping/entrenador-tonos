@@ -24,9 +24,22 @@ interface Results {
     tono_impuesto: number;
     audio_original: string;
     audio_cambiado: string;
-    veredictos: { juez: JudgeName; tono: number | null }[];
+    veredictos: { juez: JudgeName; tono: number | null; avisa: boolean | null }[];
   }[];
   semillas: { n: number; sd_maxima_contrafactual: number; mismo_orden: boolean };
+  ompal: {
+    falsa_alarma_objetivo: number;
+    n: { silabas: number; errores: number; alumnos: number };
+    kappa_profesores: number;
+    jueces: { juez: JudgeName; detecta: number; falsa_alarma: number; detecta_misma_falsa_alarma: number }[];
+    detector: {
+      detecta_misma_falsa_alarma: number;
+      particiones_que_gana: number;
+      particiones: number;
+      detecta_fabricados_demo: number;
+      hubert_detecta_fabricados_demo: number;
+    };
+  };
   n: { silabas_aishell3: number; hablantes_aishell3: number; silabas_cambiadas: number };
 }
 
@@ -45,6 +58,9 @@ const HUBERT_ACCURACY = findRow(RESULTS.contexto, (row) => row.modelo === "huber
 const LEXICON_ACCURACY = findRow(RESULTS.contexto, (row) => row.modelo === "lexico_sin_audio");
 const CNN_DETECTION = findRow(RESULTS.inversion, (row) => row.juez === "cnn_silaba");
 const HUBERT_DETECTION = findRow(RESULTS.inversion, (row) => row.juez === "hubert");
+const OMPAL = RESULTS.ompal;
+const CNN_REAL = findRow(OMPAL.jueces, (row) => row.juez === "cnn_silaba");
+const HUBERT_REAL = findRow(OMPAL.jueces, (row) => row.juez === "hubert");
 
 interface Stat {
   value: number;
@@ -134,7 +150,7 @@ export function ResultsStep() {
       </section>
 
       <section className="card">
-        <SectionTitle number={3}>Pero ¿quién oye de verdad el tono?</SectionTitle>
+        <SectionTitle number={3}>Con errores fabricados, el orden se invierte</SectionTitle>
         <HeadlineStats
           first={{ value: CNN_DETECTION.detecta, label: "errores que detecta la CNN por sílaba" }}
           second={{ value: HUBERT_DETECTION.detecta, label: "errores que detecta HuBERT" }}
@@ -143,7 +159,8 @@ export function ResultsStep() {
         <p className="muted">
           Se cambia por ordenador el tono de una sílaba en {COUNT.format(RESULTS.n.silabas_cambiadas)} frases, como
           haría un alumno que se equivoca. El orden se invierte: el que más acierta con nativos es el que más errores
-          deja pasar, porque decide por la palabra y no por cómo suena.
+          deja pasar. Parecía que decidía por la palabra y no por cómo suena; con errores reales (sección 4) no se
+          sostiene.
         </p>
         <table className="verdict-table">
           <thead>
@@ -183,7 +200,82 @@ export function ResultsStep() {
       </section>
 
       <section className="card">
-        <SectionTitle number={4}>Escúchalo</SectionTitle>
+        <SectionTitle number={4}>Con errores reales, otra vez al revés</SectionTitle>
+        <HeadlineStats
+          first={{ value: CNN_REAL.falsa_alarma, label: "sílabas bien dichas que la CNN marca como error" }}
+          second={{ value: HUBERT_REAL.falsa_alarma, label: "las que marca HuBERT" }}
+          connector="vs"
+        />
+        <p className="muted">
+          {COUNT.format(OMPAL.n.silabas)} sílabas de {OMPAL.n.alumnos} alumnos francófonos (corpus OMPAL, CC BY 4.0), con
+          los errores marcados por profesores: {COUNT.format(OMPAL.n.errores)} tonos mal dichos. Con errores de verdad,
+          HuBERT detecta casi lo mismo que la CNN y molesta mucho menos al que lo dice bien.
+        </p>
+        <table className="verdict-table">
+          <thead>
+            <tr>
+              <th scope="col">Juez</th>
+              <th scope="col">Detecta el error</th>
+              <th scope="col">Avisa sin error</th>
+              <th scope="col">Detecta con {formatPercent(OMPAL.falsa_alarma_objetivo)} de avisos sin error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {OMPAL.jueces.map((row) => (
+              <tr key={row.juez}>
+                <th scope="row">{JUDGES[row.juez].name}</th>
+                <td>
+                  <span className="outcome ok">{formatPercent(row.detecta)}</span>
+                </td>
+                <td>
+                  <span className="outcome ko">{formatPercent(row.falsa_alarma)}</span>
+                </td>
+                <td>{formatPercent(row.detecta_misma_falsa_alarma)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="small muted">
+          Con el mismo nivel de avisos sin error, los tres se parecen: buena parte de la ventaja de HuBERT es que avisa
+          menos, no que separe mejor. Los profesores coinciden poco entre sí (kappa {OMPAL.kappa_profesores.toLocaleString("es-ES")}), así que la etiqueta es ruidosa.
+        </p>
+      </section>
+
+      <section className="card">
+        <SectionTitle number={5}>Lo que mejora: aprender de alumnos</SectionTitle>
+        <HeadlineStats
+          first={{ value: HUBERT_REAL.detecta_misma_falsa_alarma, label: "detecta HuBERT sin entrenar con alumnos" }}
+          second={{ value: OMPAL.detector.detecta_misma_falsa_alarma, label: "detecta entrenado con alumnos" }}
+          connector="→"
+        />
+        <p className="muted">
+          Con {formatPercent(OMPAL.falsa_alarma_objetivo)} de avisos sin error en los dos casos. El detector «HuBERT +
+          alumnos» aprende de los errores reales y gana en {OMPAL.detector.particiones_que_gana} de las{" "}
+          {OMPAL.detector.particiones} particiones del corpus, siempre con alumnos que no vio al entrenar.
+        </p>
+        <p className="small muted">
+          Con los errores fabricados de la demo, en cambio, es el que menos detecta:{" "}
+          {formatPercent(OMPAL.detector.detecta_fabricados_demo)} frente a{" "}
+          {formatPercent(OMPAL.detector.hubert_detecta_fabricados_demo)} de HuBERT. Un tono cambiado por ordenador en la
+          voz de un nativo no se parece a los errores que aprendió.
+        </p>
+      </section>
+
+      <section className="card">
+        <SectionTitle number={6}>La conclusión</SectionTitle>
+        <p>
+          <strong>Cómo se evalúa a un juez de tonos decide qué juez parece el mejor.</strong> Con nativos gana HuBERT; con
+          errores fabricados, la CNN; con errores reales de alumnos, HuBERT otra vez, y con el mismo nivel de avisos
+          empatan. Solo los errores reales miden lo que una app de corrección necesita, y entrenar con ellos es lo que
+          más mejora al juez.
+        </p>
+        <p className="small muted">
+          Los alumnos son francófonos: con hispanohablantes no se ha probado.
+        </p>
+      </section>
+
+      <section className="card">
+        <SectionTitle number={7}>Escúchalo</SectionTitle>
         <p className="muted">Ejemplos elegidos al azar. Prueba los tuyos en la pestaña «¿Quién corrige?».</p>
         {RESULTS.ejemplos.map((example) => {
           const translation = translateSentence(example.frase);
@@ -202,9 +294,13 @@ export function ResultsStep() {
                 {example.veredictos.map((verdict) => (
                   <li key={verdict.juez}>
                     {JUDGES[verdict.juez].name}{" "}
-                    <span className={`outcome ${verdict.tono === example.tono_impuesto ? "ok" : verdict.tono === example.tono_original ? "ko" : "neutral"}`}>
-                      {verdict.tono === null ? "sin voz" : `T${verdict.tono}`}
-                    </span>
+                    {verdict.avisa !== null ? (
+                      <span className={`outcome ${verdict.avisa ? "ok" : "ko"}`}>{verdict.avisa ? "avisa" : "no avisa"}</span>
+                    ) : (
+                      <span className={`outcome ${verdict.tono === example.tono_impuesto ? "ok" : verdict.tono === example.tono_original ? "ko" : "neutral"}`}>
+                        {verdict.tono === null ? "sin voz" : `T${verdict.tono}`}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

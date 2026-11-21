@@ -79,12 +79,15 @@ export interface LabUtterance {
   syllables: LabSyllable[];
 }
 
-export type JudgeName = "cnn_silaba" | "frase" | "hubert" | "lexico";
+export type JudgeName = "cnn_silaba" | "frase" | "hubert" | "detector" | "lexico";
 
+/** Los jueces de tono dan `tone`; el detector de errores da `alert` (tono esperado mal dicho). */
 export interface Verdict {
   judge: JudgeName;
   tone: number | null;
   probabilities: Record<string, number> | null;
+  error_probability: number | null;
+  alert: boolean | null;
 }
 
 export interface JudgeResult {

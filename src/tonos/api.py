@@ -23,6 +23,7 @@ import base64
 import io
 import os
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 
 import librosa
 import numpy as np
@@ -57,6 +58,12 @@ async def lifespan(app: FastAPI):
     # El laboratorio descarga HuBERT (~380 MB) la primera vez; es opcional para poder
     # desplegar solo la práctica.
     app.state.lab = ToneJudgeLab(LAB_DIR) if os.path.isdir(LAB_DIR) else None
+    if app.state.lab is not None:
+        # El primer juicio tarda ~10 s por la inicialización perezosa de los modelos y de WORLD:
+        # se paga al arrancar y no en la primera visita.
+        utterance = app.state.lab.utterance_list()[0]
+        index, syllable = next((i, s) for i, s in enumerate(utterance["syllables"]) if s["evaluable"])
+        app.state.lab.judge(utterance["id"], index, next(t for t in app.state.lab.tones if t != syllable["tone"]))
     app.state.reference_audio = ReferenceAudioLibrary(TONE_PERFECT_DIR) if os.path.isdir(TONE_PERFECT_DIR) else None
     app.state.heavy_request_limiter = SlidingWindowRateLimiter(HEAVY_REQUESTS_PER_MINUTE, window_s=60)
     yield
@@ -131,6 +138,8 @@ class VerdictResponse(BaseModel):
     judge: str
     tone: int | None
     probabilities: dict[int, float] | None
+    error_probability: float | None = None
+    alert: bool | None = None
 
 
 class JudgeResponse(BaseModel):
@@ -266,7 +275,7 @@ def lab_judge(request: JudgeRequest, lab: ToneJudgeLab = Depends(get_lab)) -> Ju
         audio_wav_base64=base64.b64encode(result.audio_wav).decode("ascii"),
         original_contour_st=result.original_contour_st,
         judged_contour_st=result.judged_contour_st,
-        verdicts=[VerdictResponse(judge=v.judge, tone=v.tone, probabilities=v.probabilities) for v in result.verdicts],
+        verdicts=[VerdictResponse(**asdict(verdict)) for verdict in result.verdicts],
     )
 
 

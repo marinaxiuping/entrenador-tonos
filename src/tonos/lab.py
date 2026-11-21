@@ -8,6 +8,7 @@ modelos del paquete (script 35) se entrenaron sin los hablantes de las frases de
 from __future__ import annotations
 
 import io
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,13 +20,15 @@ from tonos.align import SR, load_16k
 from tonos.cnn import ContourCNN, contour_inputs, predict_logits
 from tonos.context import UtteranceTagger, predict_tagger_logits, syllable_inputs
 from tonos.embeddings import SpeechEncoder
+from tonos.error_detector import ToneErrorDetector
 from tonos.inference import SpeakerProfile
 from tonos.linear_probe import LinearProbe
 from tonos.resynthesis import impose_contour_on_span, resynthesize_with_f0
 from tonos.utterance_contours import syllable_contours
 
 BUNDLE_FILE = "laboratorio.pt"
-JUDGES = ["cnn_silaba", "frase", "hubert", "lexico"]
+DETECTOR_FILE = "detector_ompal.pt"
+JUDGES = ["cnn_silaba", "frase", "hubert", "detector", "lexico"]
 
 
 class LabRequestError(ValueError):
@@ -34,9 +37,14 @@ class LabRequestError(ValueError):
 
 @dataclass(frozen=True)
 class Verdict:
+    """Un juez de tono da ``tone`` y ``probabilities``; el detector de errores no clasifica el
+    tono, sino que dice si el esperado está mal dicho (``alert``) con ``error_probability``."""
+
     judge: str
     tone: int | None
     probabilities: dict[int, float] | None
+    error_probability: float | None = None
+    alert: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -68,7 +76,7 @@ class ToneJudgeLab:
         self.n_points: int = artifact["n_points"]
         self.utterances: dict[str, dict] = {u["id"]: u for u in artifact["utterances"]}
         self.profiles = {s: SpeakerProfile(**p) for s, p in artifact["profiles"].items()}
-        self.donor_contours = {int(t): np.array(c) for t, c in artifact["donor_contours"].items()}
+        self.donor_pools = {int(t): np.array(c) for t, c in artifact["donor_pools"].items()}
         self.character_tones: dict[str, int] = artifact["lexicon"]["characters"]
         self.syllable_tones: dict[str, int] = artifact["lexicon"]["syllables"]
         self.audio_dir = bundle_dir / "audio"
@@ -83,13 +91,18 @@ class ToneJudgeLab:
         self.hubert_layer: int = hubert["layer"]
         self.encoder = SpeechEncoder(hubert["model"], hubert["revision"], device)
         self.probe = LinearProbe.from_state_dict(hubert["probe"], device)
+        detector = torch.load(bundle_dir / DETECTOR_FILE, map_location="cpu", weights_only=True)
+        if detector["hubert_layer"] != self.hubert_layer:
+            raise ValueError("el detector de errores usa otra capa de HuBERT: repetir los scripts 45 y 47")
+        self.error_detector = ToneErrorDetector.from_state_dict(detector["detector"])
+        self.error_threshold: float = detector["threshold"]
         self._waveforms: dict[str, np.ndarray] = {}
 
     def utterance_list(self) -> list[dict]:
         return list(self.utterances.values())
 
     def judge(self, utterance_id: str, syllable_index: int, imposed_tone: int | None) -> JudgeResult:
-        """Juicio de los cuatro jueces sobre una sílaba, con su tono original o con ``imposed_tone``."""
+        """Juicio de los cinco jueces sobre una sílaba, con su tono original o con ``imposed_tone``."""
         utterance = self.utterances.get(utterance_id)
         if utterance is None:
             raise LabRequestError(f"frase desconocida: {utterance_id}")
@@ -107,10 +120,12 @@ class ToneJudgeLab:
         waveform = original if imposed_tone is None else resynthesize_with_f0(
             original, SR, profile.fmin, profile.fmax,
             lambda f0: impose_contour_on_span(f0, syllable["start"], syllable["end"],
-                                              self.donor_contours[imposed_tone], profile.reference_hz))
+                                              self._donor_contour(utterance_id, syllable_index, imposed_tone),
+                                              profile.reference_hz))
         original_contours = syllable_contours([original], [spans], profile, self.n_points)
         judged_contours = original_contours if imposed_tone is None else syllable_contours(
             [waveform], [spans], profile, self.n_points)
+        embedding = self._syllable_embedding(waveform, syllable)
         return JudgeResult(
             original_tone=syllable["tone"],
             imposed_tone=imposed_tone,
@@ -119,7 +134,8 @@ class ToneJudgeLab:
             judged_contour_st=_rounded(judged_contours[syllable_index]),
             verdicts=[self._cnn_verdict(judged_contours[syllable_index]),
                       self._tagger_verdict(judged_contours, syllable_index),
-                      self._hubert_verdict(waveform, syllable),
+                      self._hubert_verdict(embedding),
+                      self._detector_verdict(embedding, syllable["tone"]),
                       self._lexicon_verdict(syllable)],
         )
 
@@ -136,6 +152,11 @@ class ToneJudgeLab:
         embeddings = self.encoder.segment_means(waveform, spans)[:, self.hubert_layer].astype(np.float32)
         hubert = self.probe.logits(torch.from_numpy(embeddings).to(self.device)).cpu().numpy()
         return {"cnn_silaba": cnn, "frase": tagger, "hubert": hubert}
+
+    def _donor_contour(self, utterance_id: str, syllable_index: int, tone: int) -> np.ndarray:
+        """Contorno real de ``tone`` elegido de forma fija por sílaba: repetir el juicio suena igual."""
+        pool = self.donor_pools[tone]
+        return pool[zlib.crc32(f"{utterance_id}:{syllable_index}:{tone}".encode()) % len(pool)]
 
     def _waveform(self, utterance_id: str) -> np.ndarray:
         if utterance_id not in self._waveforms:
@@ -157,10 +178,17 @@ class ToneJudgeLab:
         logits = predict_tagger_logits(self.tagger, syllable_inputs(contours), bounds, self.device)
         return self._verdict("frase", logits[index])
 
-    def _hubert_verdict(self, waveform: np.ndarray, syllable: dict) -> Verdict:
-        embedding = self.encoder.segment_means(waveform, [(syllable["start"], syllable["end"])])[0, self.hubert_layer]
+    def _syllable_embedding(self, waveform: np.ndarray, syllable: dict) -> np.ndarray:
+        return self.encoder.segment_means(waveform, [(syllable["start"], syllable["end"])])[0, self.hubert_layer]
+
+    def _hubert_verdict(self, embedding: np.ndarray) -> Verdict:
         logits = self.probe.logits(torch.from_numpy(embedding[None]).to(self.device))[0].cpu().numpy()
         return self._verdict("hubert", logits)
+
+    def _detector_verdict(self, embedding: np.ndarray, expected_tone: int) -> Verdict:
+        """Si la sílaba lleva bien el tono del texto, no el que se le haya impuesto."""
+        error_probability = float(self.error_detector.score(embedding[None], np.array([expected_tone]))[0])
+        return Verdict("detector", None, None, round(error_probability, 4), error_probability > self.error_threshold)
 
     def _lexicon_verdict(self, syllable: dict) -> Verdict:
         tone = self.character_tones.get(syllable["hanzi"], self.syllable_tones.get(syllable["base"]))

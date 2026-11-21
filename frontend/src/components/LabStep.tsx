@@ -183,6 +183,14 @@ export function LabStep() {
             originalTone={judgement.result.original_tone}
             imposedTone={judgement.result.imposed_tone}
           />
+          <p className="muted small">
+            «HuBERT + alumnos» se entrenó con 17.001 sílabas de 46 alumnos francófonos marcadas por profesores
+            (corpus OMPAL, Hsieh et al., Interspeech 2025,{" "}
+            <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Avisa a 1 de cada 10 sílabas bien
+            dichas por alumnos; con hispanohablantes no se ha probado. Aquí suele dejar pasar el cambio: aprendió de
+            errores reales de alumnos, y un tono cambiado por ordenador en la voz de un nativo no se parece a ellos. Con
+            errores reales es el juez que más acierta.
+          </p>
           {judgement.result.imposed_tone !== null && (
             <p className="muted small">
               El audio está modificado por ordenador (WORLD): solo cambia la entonación de esa sílaba. El contorno

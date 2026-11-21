@@ -1,8 +1,7 @@
 """Datos de la pestaña "Resultados" del frontend: cifras de los experimentos y ejemplos para escuchar.
 
-Las cifras se leen de las salidas de los scripts 29, 32-34 y 39 (variación entre semillas), sin
-copiarlas a mano. Los
-ejemplos se calculan con el mismo juez que la demo en vivo (tonos.lab, paquete del script
+Las cifras se leen de las salidas de los scripts 29, 32-34, 39 (variación entre semillas) y
+41, 43, 44, 46 y 48 (errores reales de OMPAL), sin copiarlas a mano. Los ejemplos se calculan con el mismo juez que la demo en vivo (tonos.lab, paquete del script
 35): sílaba y tono impuesto al azar con semilla, sin elegir los casos que salen bien.
 
 Salidas: frontend/src/data/resultados.json y frontend/public/resultados/*.wav.
@@ -91,6 +90,32 @@ seed_variation = {"n": int(len(pd.read_csv(Path(args.seeds_summary).with_name("s
                   "sd_maxima_contrafactual": round(float(swap_seed_rates.sd.max()), 4), "mismo_orden": same_order}
 swap_metrics = json.loads((experiments / "contrafactual_cambio_tono" / "metrics.json").read_text(encoding="utf-8"))
 
+# --- Errores reales de alumnos (OMPAL) ---
+OMPAL_FALSE_ALARM = 0.10
+ompal_dir = experiments / "ompal"
+real = json.loads((ompal_dir / "metrics.json").read_text(encoding="utf-8"))
+threshold_runs = pd.read_csv(ompal_dir / "umbral" / "particiones.csv")
+detection_at_target = threshold_runs[threshold_runs.regla == f"fa_{OMPAL_FALSE_ALARM:.2f}"].groupby("juez").detecta.mean()
+detector_runs = pd.read_csv(ompal_dir / "detector" / "particiones.csv").pivot(
+    index="particion", columns="modelo", values=f"detecta_{OMPAL_FALSE_ALARM:.2f}")
+fabricated = json.loads((ompal_dir / "detector" / "demo_fabricados.json").read_text(encoding="utf-8"))
+annotator_kappa = json.loads((ompal_dir / "metrics_analisis.json").read_text(encoding="utf-8"))["kappa_medio"]["anotadores"]
+ompal = {
+    "falsa_alarma_objetivo": OMPAL_FALSE_ALARM,
+    "n": {"silabas": real["n"]["silabas_alumnos"], "errores": real["n"]["errores_mayoria"],
+          "alumnos": real["n"]["hablantes"]},
+    "kappa_profesores": round(float(annotator_kappa), 2),
+    "jueces": [{"juez": judge, "detecta": real["jueces"][judge]["detecta"],
+                "falsa_alarma": real["jueces"][judge]["falsa_alarma"],
+                "detecta_misma_falsa_alarma": round(float(detection_at_target[judge]), 4)}
+               for judge in ["cnn_silaba", "frase", "hubert"]],
+    "detector": {"detecta_misma_falsa_alarma": round(float(detector_runs.detector_hubert.mean()), 4),
+                 "particiones_que_gana": int((detector_runs.detector_hubert > detector_runs.juez_hubert).sum()),
+                 "particiones": int(len(detector_runs)),
+                 "detecta_fabricados_demo": fabricated["jueces"]["detector"]["detecta"],
+                 "hubert_detecta_fabricados_demo": fabricated["jueces"]["hubert"]["detecta"]},
+}
+
 # --- Ejemplos con el juez de la demo ---
 lab = ToneJudgeLab(args.lab)
 rng = np.random.default_rng(args.seed)
@@ -107,7 +132,7 @@ for utterance in rng.choice(lab.utterance_list(), size=args.examples, replace=Fa
         "frase": utterance["text"], "silaba": syllable["hanzi"], "pinyin": syllable["pinyin"],
         "tono_original": syllable["tone"], "tono_impuesto": imposed,
         "audio_original": f"resultados/{names['original']}", "audio_cambiado": f"resultados/{names['cambiado']}",
-        "veredictos": [{"juez": v.judge, "tono": v.tone} for v in changed.verdicts],
+        "veredictos": [{"juez": v.judge, "tono": v.tone, "avisa": v.alert} for v in changed.verdicts],
     })
 
 results = {
@@ -116,6 +141,7 @@ results = {
     "f0_plano": flat_f0,
     "inversion": inversion,
     "semillas": seed_variation,
+    "ompal": ompal,
     "ejemplos": examples,
     "n": {"silabas_aishell3": rung["n_silabas"], "hablantes_aishell3": int(pd.read_parquet(args.syllables, columns=["speaker"]).speaker.nunique()),
           "silabas_cambiadas": swap_metrics["n_silabas_cambiadas"]},

@@ -1,6 +1,6 @@
 """Genera notebooks/02_escalera_dominio.ipynb sin ejecutar.
 
-El texto del notebook cita cifras de los scripts 06, 15, 16 y 29-36: si cambian los
+El texto del notebook cita cifras de los scripts 06, 15, 16, 29-37 y 39-49: si cambian los
 resultados, hay que revisarlo aquí y regenerarlo. Las celdas se ejecutan después con
 nbconvert, que es lo que deja las salidas en el notebook.
 
@@ -37,9 +37,11 @@ Continúa [01_tone_perfect_pipeline.ipynb](01_tone_perfect_pipeline.ipynb). All�
 1. **Peldaño 1: habla continua de nativos (AISHELL-3).** ¿Cuánto cae el modelo de la app y por qué?
 2. **Contexto y modelos preentrenados.** ¿Se recupera con contexto de frase o con HuBERT?
 3. **Dos contrafactuales.** ¿Los modelos deciden por el tono que oyen o por la palabra que reconocen?
-4. **De los resultados a la app.** La demo «¿Quién te corrige?», la pestaña de resultados y la guía tarareada.
+4. **Peldaño 2: errores reales de alumnos (OMPAL).** ¿Se sostiene lo que dicen los contrafactuales cuando los errores son de verdad?
+5. **La tesis.** Tres formas de evaluar a los mismos jueces y tres órdenes distintos.
+6. **De los resultados a la app.** La demo «¿Quién te corrige?», la pestaña de resultados y la guía tarareada.
 
-El peldaño 2 (hispanohablantes) depende de las grabaciones y está pendiente.
+Los alumnos de OMPAL son francófonos. El peldaño con hispanohablantes depende de grabaciones que no se han podido reunir a tiempo.
 
 Igual que el 01, el notebook **no vuelve a ejecutar los pasos pesados** (F0 de 17.549 frases, embeddings, entrenamientos, resíntesis). Lee lo que dejan los scripts en `data/` y `outputs/`. Para regenerarlo todo (requiere el alineamiento de AISHELL-3 de los scripts 09-12 y el pipeline de Tone Perfect del 01):
 
@@ -55,7 +57,17 @@ uv run python scripts/33_contrafactual_f0_plano.py
 uv run python scripts/34_contrafactual_cambio_tono.py
 # semillas 1 y 2 de 29, 30 y 34 con --train-seed y --out outputs/escalera_dominio/semillas/<carpeta>/semilla_<n>
 uv run python scripts/39_resumir_semillas.py
+uv run python scripts/40_alinear_ompal.py
+uv run python scripts/41_jueces_ompal.py
+uv run python scripts/42_revisar_alineamiento_ompal.py   # audios para revisar el alineamiento a oído
+uv run python scripts/43_analizar_ompal.py
+uv run python scripts/44_umbral_ompal.py
+uv run python scripts/45_embeddings_ompal.py
+uv run python scripts/46_detector_errores_ompal.py
+uv run python scripts/49_juez_practicar_ompal.py
 uv run python scripts/35_preparar_laboratorio.py
+uv run python scripts/47_detector_laboratorio.py
+uv run python scripts/48_detector_errores_fabricados.py
 uv run python scripts/36_exportar_resultados.py
 uv run python scripts/06_exportar_guia_tonos.py
 ```
@@ -345,7 +357,9 @@ add_markdown("""
 - **HuBERT:** acierta el 97 % pero solo detecta el 31 %, y en el **47 %** de los casos responde con el tono que «toca» según la palabra.
 - **Léxico:** por construcción se queda siempre con el tono original (el 2 % restante son sus propios errores).
 
-En todos los pares de tonos, la CNN por sílaba detecta más que la BiGRU y esta más que HuBERT. La debilidad compartida es imponer un T3 (lo comprimido y bajo se confunde fácilmente). Esta es la tesis del trabajo: **en un sistema de corrección, la accuracy sobre habla nativa no mide la validez del juez. Hay que medir si su decisión sigue a la señal que se quiere evaluar.** Para la app, el mejor juez es el más simple, la CNN por sílaba sin contexto, que es la que ya usa. Lo que hay que mejorar es su accuracy en habla continua sin añadirle contexto ni léxico.
+En todos los pares de tonos, la CNN por sílaba detecta más que la BiGRU y esta más que HuBERT. La debilidad compartida es imponer un T3 (lo comprimido y bajo se confunde fácilmente).
+
+Con estos datos, la conclusión parecía clara: la accuracy con nativos no mide la validez del juez, y el más simple, la CNN por sílaba, es el mejor para corregir. La primera mitad se sostiene. La segunda no: la sección 8 pone a los mismos jueces ante errores reales de alumnos y el orden vuelve a cambiar.
 
 """)
 
@@ -365,20 +379,171 @@ detection.pivot(index="semilla", columns="juez", values="valor")[["cnn_silaba", 
 
 add_markdown("""
 La desviación entre semillas es de milésimas: 0,001 en la accuracy de la CNN por sílaba y de la frase, y como mucho 0,007 en las tasas del contrafactual (lo que deja pasar la frase). Las diferencias entre jueces son de decenas de puntos, así que el orden CNN > frase > HuBERT en detección se repite en las tres semillas. La semilla no explica ningún resultado de este notebook.
+""")
 
-## 8. De los resultados a la app
+add_markdown("""
+## 8. Peldaño 2: errores reales de alumnos (OMPAL)
+
+Los contrafactuales fabrican el error: cambian solo el F0 de la sílaba de un nativo. Un alumno que se equivoca no hace eso. Puede dudar, alargar la sílaba o pronunciarla a medias. **OMPAL** (Hsieh et al., Interspeech 2025, CC BY 4.0) son 1.768 frases leídas por 46 alumnos francófonos de mandarín y 82 de 3 nativos. Tres profesores marcan cada carácter de los alumnos con «tono correcto» o «tono incorrecto». Los caracteres son tradicionales, así que probablemente es mandarín de Taiwán.
+
+### 8.1 Preparación
+
+- **Tono esperado** (`40`): pypinyin sobre la frase entera, con el sandhi de 一, 不 y del tercer tono. Un T3 seguido de otro T3 se marca como ambiguo y se excluye (526 sílabas de alumnos): no se sabe si lo correcto era T2 o T3.
+- **Tiempos:** OMPAL no trae dónde está cada sílaba. Se alinean con el mismo MMS_FA que AISHELL-3. Con alumnos que se equivocan, el alineamiento puede fallar, y entonces el juez juzgaría un trozo que no es la sílaba anotada. `42` exporta 20 frases (223 sílabas), con las 5 de peor score CTC, cada sílaba recortada y separada por silencios. **La revisión a oído dio los cortes por buenos.** Fue un veredicto global, sin anotar sílaba a sílaba, así que no hay un porcentaje de cortes correctos.
+- **Etiqueta:** el tono está mal si lo dicen al menos 2 de los 3 profesores.
+- **Jueces:** los de la demo (paquete de `35`), entrenados con AISHELL-3. Ningún hablante de OMPAL se ha visto al entrenar.
+""")
+
+add_code("""
+ompal = load_json(OUT / "ompal" / "metrics.json")
+print(ompal["n"])
+judges_real = pd.DataFrame(ompal["jueces"]).T.drop(index="lexico_sin_audio")
+judges_real[["detecta", "falsa_alarma", "auc", "falsa_alarma_nativos"]].astype(float)
+""")
+
+add_markdown("""
+### 8.2 Los jueces ante errores reales
+
+Se evalúan 17.001 sílabas de alumnos, de las que 2.389 (14,1 %) tienen el tono mal según la mayoría. Un juez «avisa» cuando el tono que oye no es el esperado.
+
+**El resultado contradice al contrafactual.** HuBERT es el que mejor separa los tonos bien dichos de los mal dichos (AUC 0,859 frente a 0,831 de la CNN y 0,830 de la frase). Detecta casi lo mismo que la CNN (0,85 frente a 0,89) y da muchas menos falsas alarmas: 25 % de las sílabas bien dichas por alumnos frente a 42 %, y 10 % frente a 38 % con nativos. Lo que en `34` parecía su gran defecto, dejar pasar el error porque reconoce la palabra, con errores reales no aparece. La ventaja de AUC de HuBERT sobre la CNN es pequeña pero no es ruido: +0,028, con intervalo pareado por hablantes [0,016; 0,040] (sección 8.3).
+
+### 8.3 Cuánto coinciden los profesores y qué pesa la palabra
+
+`43` compara a cada profesor y a cada juez con los otros dos profesores cuando estos coinciden, y calcula el kappa de Cohen. También da la AUC de cada juez y la diferencia entre cada par con los mismos remuestreos de hablantes (intervalo pareado).
+""")
+
+add_code("""
+analysis = load_json(OUT / "ompal" / "metrics_analisis.json")
+display(pd.DataFrame(analysis["techo_humano_medio"]).T)
+print("kappa medio:", analysis["kappa_medio"])
+segments = pd.DataFrame(analysis["segmentos"])
+display(segments.pivot_table(index=["tono", "segmentos", "n"], columns="juez", values="tasa"))
+pd.read_csv(OUT / "ompal" / "auc_pareada.csv").set_index("comparacion")
+""")
+
+add_markdown("""
+- **La etiqueta es ruidosa.** Entre profesores, el kappa medio es 0,45. HuBERT llega a 0,35 con cada profesor y la CNN a 0,22. Un profesor frente a los otros dos detecta solo el 58 % de los errores, con un 5 % de falsas alarmas: los profesores avisan mucho menos que cualquier juez. Supuesto sin verificar: que la posición de cada voto en el JSON sea siempre el mismo profesor.
+- **La ventaja de HuBERT en AUC es real pero pequeña:** +0,028 sobre la CNN y +0,029 sobre la frase, con intervalos que no incluyen el 0. La CNN y la frase son indistinguibles (−0,001 [−0,012; 0,011]).
+- **HuBERT no parece decidir por la palabra.** Si lo hiciera, dejaría pasar más errores de tono cuando la consonante y la vocal están bien, porque la palabra se reconoce. Con los segmentos bien detecta el 86 % y con los segmentos mal el 78 %: no se ve ese patrón.
+
+### 8.4 El umbral: con la misma falsa alarma, los jueces se parecen
+
+Con argmax, cada juez trabaja en un punto distinto: la CNN avisa mucho y HuBERT poco. `44` fija para cada juez el umbral de p(tono esperado) que da una falsa alarma objetivo en el train de cada una de las **5 particiones oficiales** de OMPAL, y lo mide en su test. Las particiones separan hablantes (42 en train, 5 en test), pero sus test se solapan entre sí: se resume con la media por partición.
+""")
+
+add_code("""
+threshold = pd.read_csv(OUT / "ompal" / "umbral" / "particiones.csv")
+threshold.groupby(["juez", "regla"], sort=False)[["umbral", "detecta", "falsa_alarma", "falsa_alarma_nativos"]].mean()
+""")
+
+add_markdown("""
+Al 10 % de falsa alarma, la CNN detecta 0,52, la frase 0,49 y HuBERT 0,53. Al 20 %, 0,71, 0,69 y 0,78. **Buena parte de la ventaja de HuBERT con argmax es de punto de trabajo, no de separar mejor.** Además, pedir pocas falsas alarmas cuesta caro: al 10 %, los tres dejan pasar casi la mitad de los errores. Los umbrales salen muy bajos (0,005 a 0,025): los jueces dan una probabilidad casi nula al tono esperado en muchas sílabas bien dichas.
+
+### 8.5 Entrenar con errores reales
+
+Ningún juez ha oído a un alumno al entrenar. `45` y `46` entrenan directamente la pregunta de la app, «¿la sílaba lleva bien el tono esperado?», con la etiqueta de los profesores. Es una regresión logística por tono esperado (`tonos.error_detector`), con C elegido por validación cruzada agrupada por hablante. El umbral se fija con predicciones fuera de fold del train, en las que cada fold elige también su propia C, para que no salga optimista. Se prueban tres entradas: la probabilidad del tono esperado de los tres jueces, el embedding de HuBERT de la sílaba (la misma capa que el juez) y ese embedding más el contorno de F0.
+""")
+
+add_code("""
+detector = pd.read_csv(OUT / "ompal" / "detector" / "particiones.csv")
+display(detector.drop(columns="particion").groupby("modelo", sort=False).mean())
+detector.pivot(index="particion", columns="modelo", values="detecta_0.10")
+""")
+
+add_markdown("""
+**Entrenar con alumnos es lo que más mejora.** El detector sobre HuBERT detecta 0,68 al 10 % de falsa alarma, frente a 0,53 del juez HuBERT sin entrenar, y su AUC pasa de 0,851 a 0,880. Gana en las 5 particiones. Recombinar los tres jueces existentes da la mitad de la mejora (0,61). El contorno de F0 no añade nada al embedding (0,66). La falsa alarma medida en test va de 0,07 a 0,16 para un objetivo de 0,10: con 4 alumnos por test, varía mucho entre particiones. Entrenado con los 46 alumnos (`47`), fuera de fold da AUC 0,890 y detecta el 69 % con el 10 % de falsas alarmas.
+
+Se usa una logística sobre el embedding congelado y no un ajuste fino de HuBERT: 46 alumnos y unos 2.400 errores no dan para ajustar 95 millones de parámetros sin sobreajustar.
+
+### 8.6 El mejor juez con errores reales, el peor con errores fabricados
+
+`48` pasa a los cuatro jueces por los errores fabricados de la demo: las 24 frases de `35`, cada sílaba tal cual y con cada uno de los otros tres tonos impuestos con WORLD.
+""")
+
+add_code("""
+fabricated = load_json(OUT / "ompal" / "detector" / "demo_fabricados.json")
+print(fabricated["n"])
+pd.DataFrame(fabricated["jueces"]).T
+""")
+
+add_markdown("""
+**El detector entrenado con alumnos es el que menos cambios detecta (30 %).** Es justo el que más acierta con errores reales. Aprendió cómo suena un alumno que se equivoca, y un tono trasplantado sobre la voz de un nativo no se parece a eso. Esta explicación es una hipótesis sin verificar.
+
+Las tasas de los jueces de tono en la demo no coinciden con las de `34` (CNN 0,88 frente a 0,675). La demo imponía antes el contorno real más cercano a la media de cada tono, el prototipo que `34` había descartado por inflar la detección, y con él la CNN llegaba al 96 %. Desde el 21 de noviembre usa contornos reales al azar, como `34`, y la diferencia se reduce pero no desaparece. No la explican ni el criterio de selección de frases ni los 8 hablantes de la demo: en `34`, con esas mismas condiciones, la CNN detecta el 66 % y el 69 %. **Sirve para comparar el orden de los jueces, no como estimación.** La cifra de referencia es la de `34`.
+
+### 8.7 El juez de Practicar: solo una cota
+
+Practicar juzga sílabas sueltas con la CNN de Tone Perfect, y OMPAL no tiene sílabas sueltas: su frase más corta tiene 5 sílabas. No hay una validación limpia. `49` aplica el mismo modelo y la misma regla que la app (avisa si el tono más probable no es el esperado) a las sílabas de OMPAL. Es una cota inferior: mezcla el error de juzgar a alumnos con el salto de sílaba aislada a habla continua, que en AISHELL-3 ya bajaba su accuracy de 0,988 a 0,566.
+""")
+
+add_code("""
+practice = load_json(OUT / "ompal" / "practicar" / "metrics.json")
+display(pd.DataFrame({k: v["tasa"] if isinstance(v, dict) else v for k, v in practice["regla_de_la_app"].items()}, index=["practicar"]))
+print("AUC:", practice["auc"], "| diferencia pareada:", practice["auc_practicar_menos_cnn_demo"])
+pd.DataFrame(practice["detecta_con_falsa_alarma_0.10"]).T
+""")
+
+add_markdown("""
+**El juez de Practicar no sirve para habla continua, y ahí es peor que la CNN de la demo.** Con los nativos de OMPAL solo acierta el 52 % y marca como error el 48 % de sus sílabas, así que el salto de dominio domina el resultado. Con alumnos da un 47 % de falsas alarmas y AUC 0,780, frente a 0,831 de la CNN entrenada con AISHELL-3 (diferencia pareada −0,052 [−0,063; −0,041]). Con un 10 % de falsas alarmas detecta el 39 % de los errores, frente al 52 %.
+
+Esto no dice cómo se porta con una sílaba suelta, que es lo que graba Practicar. Lo que sí dice es que el juez de la app no tiene ninguna validación con errores reales en su propio formato, y que la pieza que más se ha estudiado en este trabajo (los jueces de frase) no es la que usa Practicar.
+
+## 9. La tesis: tres evaluaciones, tres órdenes
+
+Los mismos jueces, medidos de tres formas:
+""")
+
+add_code("""
+swap_rates = rates.pivot(index="modelo", columns="metrica", values="tasa")
+threshold_10 = threshold[threshold.regla == "fa_0.10"].groupby("juez").detecta.mean()
+detector_means = detector.drop(columns="particion").groupby("modelo").mean()
+detector_means.index = detector_means.index.str.replace("juez_", "").str.replace("detector_hubert$", "detector", regex=True)
+demo_detection = pd.Series({judge: rates["detecta"] for judge, rates in fabricated["jueces"].items()})
+judges = ["cnn_silaba", "frase", "hubert", "detector"]
+# Cada columna sale de una sola fuente, para no comparar cifras de experimentos distintos.
+pd.DataFrame({
+    "accuracy con nativos (34)": swap_rates["acierto_original"],
+    "detecta errores fabricados (34)": swap_rates["detecta_cambio"],
+    "detecta errores fabricados en la demo (48)": demo_detection,
+    "AUC con errores reales, media por partición (46)": detector_means["auc"],
+    "detecta errores reales al 10 % de falsa alarma (46)": detector_means["detecta_0.10"],
+}).reindex(judges)
+""")
+
+add_markdown("""
+| Evaluación | Orden |
+|---|---|
+| Accuracy con nativos | HuBERT > frase > CNN |
+| Errores fabricados | CNN > frase > HuBERT |
+| Errores reales (AUC) | HuBERT > CNN ≈ frase |
+| Errores reales, con la misma falsa alarma | empate entre los tres; el detector entrenado, muy por encima |
+
+El detector no está en `34` (sus frases no se pueden volver a juzgar sin repetir la resíntesis): su comparación con errores fabricados es dentro de la demo (`48`), donde todos los jueces detectan más que en `34`.
+
+**Tesis: cómo se evalúa a un juez de tonos decide qué juez parece el mejor.** Con nativos, con errores fabricados y con errores reales de alumnos, los mismos jueces quedan en órdenes distintos. Solo los errores reales miden lo que la app necesita, y entrenar con ellos es lo que más mejora al juez.
+
+- **Se conserva** de la versión anterior: la accuracy con nativos no mide la validez de un juez.
+- **Se cae:** «HuBERT deja pasar los errores del alumno porque usa el léxico». Era un efecto de los errores fabricados.
+- **Se añade:** con errores reales, buena parte de la diferencia entre jueces depende del umbral. Lo que de verdad mejora es entrenar con errores de alumnos, y el juez entrenado así es el peor con errores fabricados: los errores fabricados no sustituyen a los reales.
+
+Hipótesis sin verificar: el orden se invierte porque WORLD solo cambia el F0 y deja intactos la duración, la intensidad y la articulación de nativo, mientras que un alumno que se equivoca de tono probablemente también duda o alarga la sílaba, y HuBERT puede captarlo.
+""")
+
+add_markdown("""
+## 10. De los resultados a la app
 
 Los hallazgos se han llevado a dos pestañas nuevas del frontend:
 
-- **«¿Quién te corrige?»** (`src/tonos/lab.py`, `/api/lab/*`, paquete de `35_preparar_laboratorio.py`). Eliges una sílaba de una frase real, le cambias el tono y ves en vivo el veredicto de los cuatro jueces.
+- **«¿Quién te corrige?»** (`src/tonos/lab.py`, `/api/lab/*`, paquete de `35_preparar_laboratorio.py`). Eliges una sílaba de una frase real, le cambias el tono y ves en vivo el veredicto de cinco jueces: los tres de este notebook, el detector entrenado con alumnos de OMPAL (sección 8.5) y el léxico.
   - **Sin trampas:** los modelos se entrenan sin el fold 0 y las 24 frases de la demo salen solo de sus 8 hablantes, elegidas al azar sin mirar qué aciertan los modelos.
-  - **Contorno impuesto:** el de la sílaba real de entrenamiento más cercana a la media de cada tono; típico pero natural.
+  - **Contorno impuesto:** una de 200 sílabas reales de entrenamiento de ese tono, elegidas al azar como en `34`, fija para cada sílaba y tono. Hasta el 21 de noviembre era la más cercana a la media del tono, que inflaba la detección de los jueces de F0 (sección 8.6).
   - **Coste:** un juicio tarda ~0,55 s en CPU. Es opcional en la API porque añade HuBERT (~380 MB) al despliegue.
 - **«Resultados»** (`36_exportar_resultados.py`). Página estática con las cifras de esta escalera, leídas de `outputs/` y no copiadas a mano, más 4 ejemplos al azar para escuchar.
 
 En la práctica se añadió además una **guía tarareada** (`06_exportar_guia_tonos.py`, `frontend/src/audio/toneGuide.ts`). Antes de grabar se puede escuchar la melodía del tono objetivo a la altura de la propia voz. Usa el mismo contorno que dibuja la gráfica y la duración mediana de cada tono en Tone Perfect (T1 0,64 s, T2 0,71 s, T3 0,84 s, T4 0,50 s). La duración no entra en el modelo porque no transfiere entre hablantes, pero ayuda a imitar.
 
-Se verificó capturando el audio en Edge y midiendo su F0 con Praat (18 de noviembre, no guardado en `outputs/`): error frente al contorno esperado de 0,02 a 0,66 st. El primer timbre (diente de sierra) sonaba a trompeta y se cambió por armónicos que caen como 1/n², que suenan a «mmm» tarareado. La voz nativa de Tone Perfect está pendiente de confirmar su licencia: no aparece en su web y servir los audios en una app desplegada sería redistribuir el corpus.
+Se verificó capturando el audio en Edge y midiendo su F0 con Praat (18 de noviembre, no guardado en `outputs/`): error frente al contorno esperado de 0,02 a 0,66 st. El primer timbre (diente de sierra) sonaba a trompeta y se cambió por armónicos que caen como 1/n², que suenan a «mmm» tarareado. La voz nativa de Tone Perfect se sirve con su licencia, CC BY-NC 4.0, confirmada el 18 de noviembre: con atribución y sin uso comercial.
 """)
 
 add_code("""
@@ -387,13 +552,14 @@ print("duración de la guía por tono (s):", {t: g["duration_s"] for t, g in gui
 lab_results = load_json(ROOT / "frontend" / "src" / "data" / "resultados.json")
 pd.DataFrame([{"texto": e["frase"], "sílaba": f"{e['silaba']} {e['pinyin']}",
                "cambio": f"T{e['tono_original']} -> T{e['tono_impuesto']}",
-               **{v["juez"]: v["tono"] for v in e["veredictos"]}} for e in lab_results["ejemplos"]])
+               **{v["juez"]: v["tono"] if v.get("avisa") is None else ("avisa" if v["avisa"] else "no avisa")
+                  for v in e["veredictos"]}} for e in lab_results["ejemplos"]])
 """)
 
 add_markdown("""
-Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, muestran la variedad real: en uno detectan el cambio la CNN por sílaba y HuBERT, en otro las dos CNN, en otro solo la CNN por sílaba y en el último nadie.
+Los cuatro ejemplos de la pestaña Resultados se eligen al azar con semilla, sin mirar qué jueces aciertan. Muestran casos distintos de quién detecta el cambio y quién no.
 
-## 9. Decisiones y límites
+## 11. Decisiones y límites
 
 | Decisión | Motivo | Alternativa descartada |
 |---|---|---|
@@ -407,14 +573,23 @@ Los cuatro ejemplos de la pestaña Resultados, elegidos al azar con semilla, mue
 | Regresión logística de HuBERT en GPU (L-BFGS, 100 iteraciones) | 325 ajustes viables; misma accuracy que con 300 | sklearn (horas) |
 | Contrafactuales con control de resíntesis y comprobación de la manipulación | Separar el efecto de la manipulación de los artefactos de WORLD y verificar que se hizo | Fiarse de que la resíntesis cambia lo que se pretende |
 | Contorno impuesto de una sílaba real de otro fold | La media del tono es un prototipo que infla la detección de los modelos de F0 | Imponer la media del tono |
-| La CNN por sílaba sigue siendo el juez de la app | Es la que más errores detecta (67,5 %) y la que menos deja pasar (10 %) | HuBERT (97 % con nativos, pero deja pasar el 47 % de los errores) |
+| La CNN de Tone Perfect sigue siendo el juez de Practicar | Es el único juez de sílaba suelta. Se eligió por el contrafactual (detecta el 67,5 %), que OMPAL no confirma. En habla continua de OMPAL es peor que la CNN de la demo (AUC 0,780 frente a 0,831), una cota que no mide su formato | Cambiar de juez sin datos de sílaba suelta con alumnos |
+| Validar con errores reales de OMPAL, con sus 5 particiones oficiales | Es la única forma de saber si un juez sirve para corregir; las particiones separan hablantes | Seguir solo con contrafactuales |
+| Umbral fijado por falsa alarma objetivo con alumnos | Compara a los jueces en el mismo punto de trabajo y prioriza no frustrar al alumno | Argmax (cada juez en un punto distinto) o máximo de Youden |
+| Detector: logística por tono sobre el embedding congelado, umbral fuera de fold | 46 alumnos no dan para ajustar HuBERT; el umbral fuera de fold no sale optimista | Ajuste fino de HuBERT; umbral sobre las predicciones del propio train |
+| Contornos donantes de la demo al azar, no el prototipo del tono | El prototipo inflaba la detección de la CNN (96 % frente a 67,5 %) | Mantener el prototipo |
 
 **Límites:**
 - **Semillas:** tres semillas de entrenamiento en 29, 30 y 34, con los mismos folds y datos. No se ha variado el reparto de hablantes en folds ni la selección de frases del contrafactual.
 - **Etiquetas y alineamiento:** AISHELL-3 tiene un ~1-2 % de ruido de etiqueta y el alineamiento solo se revisó a mano en 30 bisílabos.
-- **Los contrafactuales no son errores reales.** El contorno trasplantado no trae la coarticulación que tendría el error de un alumno, y WORLD introduce artefactos pequeños (−1 a −2 puntos en el control). El F0 plano no separa léxico, pistas no tonales y sesgo hacia T1.
+- **Los contrafactuales no son errores reales, y OMPAL lo confirma:** ordenan a los jueces al revés que los errores de alumnos. WORLD introduce además artefactos pequeños (−1 a −2 puntos en el control). El F0 plano no separa léxico, pistas no tonales y sesgo hacia T1.
 - **AISHELL-3 es habla leída de nativos,** no de aprendices: mide lo frágil que es el modelo y si su decisión depende del pitch, no su rendimiento con alumnos.
-- **Peldaño 2 pendiente:** la validación definitiva son errores reales de hispanohablantes, y sigue siendo el camino crítico del TFM.
+- **OMPAL no son hispanohablantes.** Son 46 francófonos que leen frases, probablemente en mandarín de Taiwán. Que los resultados valgan para hispanohablantes es una suposición.
+- **El tamaño efectivo de OMPAL son los hablantes.** Cada test de partición tiene 4 alumnos y 1 nativo, casi siempre el mismo (001002), y los test se solapan. Varios análisis (41, 43, 44 y 46) usan la misma muestra. La ventaja de AUC de HuBERT sobre la CNN tiene intervalo pareado y no incluye el 0, pero es pequeña (+0,028); diferencias de ese orden dependen de estos 46 alumnos.
+- **La etiqueta de error es ruidosa** (kappa 0,45 entre profesores) y **el alineamiento se revisó con un veredicto global**, no sílaba a sílaba.
+- **El juez de Practicar no se ha validado con errores reales en su formato:** OMPAL solo tiene frases. En ellas, como cota inferior, da un 47 % de falsas alarmas a alumnos (sección 8.7).
+- **Las tasas de la demo no son una evaluación** (sección 8.6).
+- **Hispanohablantes pendientes:** la validación definitiva serían sus errores reales, y no se han podido grabar a tiempo.
 """)
 
 nb = new_notebook(cells=cells, metadata={"kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},

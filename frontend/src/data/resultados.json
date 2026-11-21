@@ -171,6 +171,42 @@
     "sd_maxima_contrafactual": 0.0071,
     "mismo_orden": true
   },
+  "ompal": {
+    "falsa_alarma_objetivo": 0.1,
+    "n": {
+      "silabas": 17001,
+      "errores": 2389,
+      "alumnos": 46
+    },
+    "kappa_profesores": 0.45,
+    "jueces": [
+      {
+        "juez": "cnn_silaba",
+        "detecta": 0.8895,
+        "falsa_alarma": 0.4165,
+        "detecta_misma_falsa_alarma": 0.5157
+      },
+      {
+        "juez": "frase",
+        "detecta": 0.8891,
+        "falsa_alarma": 0.405,
+        "detecta_misma_falsa_alarma": 0.4881
+      },
+      {
+        "juez": "hubert",
+        "detecta": 0.8535,
+        "falsa_alarma": 0.2501,
+        "detecta_misma_falsa_alarma": 0.5328
+      }
+    ],
+    "detector": {
+      "detecta_misma_falsa_alarma": 0.6763,
+      "particiones_que_gana": 5,
+      "particiones": 5,
+      "detecta_fabricados_demo": 0.3035,
+      "hubert_detecta_fabricados_demo": 0.5158
+    }
+  },
   "ejemplos": [
     {
       "frase": "系上安全带的模样",
@@ -183,19 +219,28 @@
       "veredictos": [
         {
           "juez": "cnn_silaba",
-          "tono": 1
+          "tono": 1,
+          "avisa": null
         },
         {
           "juez": "frase",
-          "tono": 4
+          "tono": 1,
+          "avisa": null
         },
         {
           "juez": "hubert",
-          "tono": 1
+          "tono": 1,
+          "avisa": null
+        },
+        {
+          "juez": "detector",
+          "tono": null,
+          "avisa": false
         },
         {
           "juez": "lexico",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         }
       ]
     },
@@ -210,19 +255,28 @@
       "veredictos": [
         {
           "juez": "cnn_silaba",
-          "tono": 2
+          "tono": 2,
+          "avisa": null
         },
         {
           "juez": "frase",
-          "tono": 2
+          "tono": 2,
+          "avisa": null
         },
         {
           "juez": "hubert",
-          "tono": 1
+          "tono": 1,
+          "avisa": null
+        },
+        {
+          "juez": "detector",
+          "tono": null,
+          "avisa": false
         },
         {
           "juez": "lexico",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         }
       ]
     },
@@ -237,19 +291,28 @@
       "veredictos": [
         {
           "juez": "cnn_silaba",
-          "tono": 2
+          "tono": 1,
+          "avisa": null
         },
         {
           "juez": "frase",
-          "tono": 1
+          "tono": 1,
+          "avisa": null
         },
         {
           "juez": "hubert",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
+        },
+        {
+          "juez": "detector",
+          "tono": null,
+          "avisa": false
         },
         {
           "juez": "lexico",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         }
       ]
     },
@@ -264,19 +327,28 @@
       "veredictos": [
         {
           "juez": "cnn_silaba",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         },
         {
           "juez": "frase",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         },
         {
           "juez": "hubert",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
+        },
+        {
+          "juez": "detector",
+          "tono": null,
+          "avisa": false
         },
         {
           "juez": "lexico",
-          "tono": 4
+          "tono": 4,
+          "avisa": null
         }
       ]
     }

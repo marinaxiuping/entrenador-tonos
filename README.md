@@ -5,8 +5,9 @@ Alcance y calendario: [alcance-tfm.md](alcance-tfm.md).
 ## Setup
 ```powershell
 uv sync
-uv run pytest   # tests de las funciones del pipeline de F0, de AISHELL-3 y de la resíntesis
+uv run pytest   # pipeline de F0, AISHELL-3, resíntesis, evaluación, detector de errores y capa HTTP de la API
 ```
+Los tests de la API usan dobles del clasificador y del laboratorio: no cargan modelos ni descargan HuBERT. `.github/workflows/ci.yml` los pasa en Linux con torch de CPU (como el `Dockerfile`) y compila el frontend.
 
 ## Datos
 - Tone Perfect: descargar manualmente de https://listings.lib.msu.edu/toneperfect/ y descomprimir en `data/raw/toneperfect/` (en cualquier estructura de subcarpetas).
@@ -44,6 +45,12 @@ uv run pytest   # tests de las funciones del pipeline de F0, de AISHELL-3 y de l
 | `scripts/37_curva_hablantes_aishell3.py` | Curva de aprendizaje con 4, 8, 16 y 32 hablantes de entrenamiento (CNN por sílaba y frase), subconjuntos anidados → `outputs/escalera_dominio/curva_hablantes/`. Solo se ha ejecutado el fold 0 y no se reanuda |
 | `scripts/38_generar_notebook_02.py` | Genera `notebooks/02_escalera_dominio.ipynb` sin ejecutar; su texto cita cifras de los scripts, así que hay que revisarlo si cambian los resultados |
 | `scripts/39_resumir_semillas.py` | Media y desviación de 29, 30 y 34 entre semillas de entrenamiento (`--train-seed`: mismos folds y datos, otra inicialización) y si el orden de los jueces se mantiene → `outputs/escalera_dominio/semillas/resumen.csv` |
+| `scripts/44_umbral_ompal.py` | Umbral de aviso de los jueces de la demo fijado en el train de cada una de las 5 particiones de OMPAL para una falsa alarma objetivo, medido en su test → `outputs/escalera_dominio/ompal/umbral/` |
+| `scripts/45_embeddings_ompal.py` | Embeddings de HuBERT (capa del juez de la demo) de cada sílaba de OMPAL → `data/processed/embeddings_ompal_hubert.npz` |
+| `scripts/46_detector_errores_ompal.py` | Detector de errores de tono entrenado con alumnos de OMPAL (sobre los jueces, HuBERT y HuBERT + contorno) frente a los jueces sin entrenar, con las 5 particiones → `outputs/escalera_dominio/ompal/detector/` |
+| `scripts/47_detector_laboratorio.py` | Detector sobre HuBERT de la demo, entrenado con los 46 alumnos de OMPAL y umbral para un 10 % de falsa alarma → `models/laboratorio/detector_ompal.pt` |
+| `scripts/48_detector_errores_fabricados.py` | Los jueces y el detector ante los errores fabricados de la demo (cada sílaba con los otros tres tonos) → `outputs/escalera_dominio/ompal/detector/demo_fabricados.json` |
+| `scripts/49_juez_practicar_ompal.py` | Cota inferior del juez de Practicar (CNN de Tone Perfect, regla de la app) con las sílabas de OMPAL, comparado con la CNN de la demo → `outputs/escalera_dominio/ompal/practicar/` |
 | `scripts/09_seleccionar_hablantes.py --per-gender 20` | Elige hablantes de AISHELL-3 equilibrados por género → `data/aishell3_hablantes.txt` |
 | `scripts/10_descargar_aishell3.py [--speakers ...]` | Descarga parcial de AISHELL-3 desde HF (metadatos y los hablantes indicados) |
 | `scripts/11_analizar_etiquetas_aishell3.py` | Palabras prosódicas, bisílabos, pares de tonos y comparación realizado vs canónico |
@@ -83,7 +90,7 @@ API:
 Formatos: wav, flac, ogg o mp3. El frontend graba con el formato nativo del navegador y lo convierte a wav antes de enviarlo. Documentación interactiva en `/docs`.
 
 ### Pestañas «¿Quién te corrige?» y «Resultados»
-- **¿Quién te corrige?** (demo en vivo): eliges una sílaba de una frase real de AISHELL-3, le cambias el tono (WORLD) y ves qué dicen la CNN por sílaba, la CNN + BiGRU, HuBERT y el léxico. Los modelos se entrenan sin los hablantes de las frases de la demo. Necesita el paquete `models/laboratorio/` (`TONOS_LAB_DIR`); si no existe, la API arranca sin estas rutas. Al arrancar descarga `chinese-hubert-base` (~380 MB) la primera vez.
+- **¿Quién te corrige?** (demo en vivo): eliges una sílaba de una frase real de AISHELL-3, le cambias el tono (WORLD) y ves qué dicen la CNN por sílaba, la CNN + BiGRU, HuBERT, el detector entrenado con errores de alumnos de OMPAL y el léxico. Los modelos se entrenan sin los hablantes de las frases de la demo. Necesita el paquete `models/laboratorio/` (`TONOS_LAB_DIR`); si no existe, la API arranca sin estas rutas. Al arrancar descarga `chinese-hubert-base` (~380 MB) la primera vez.
   - `GET /api/lab/utterances` → frases con sus sílabas.
   - `POST /api/lab/judge` con JSON `{utterance_id, syllable_index, imposed_tone}` (`null` = sin cambios) → audio WAV en base64, contornos y veredicto de cada juez.
 - **Resultados**: estática (`frontend/src/data/resultados.json` y `frontend/public/resultados/`), no usa la API.
@@ -91,6 +98,8 @@ Formatos: wav, flac, ogg o mp3. El frontend graba con el formato nativo del nave
 Para regenerarlas (requiere los scripts 15, 16 y 29-34):
 ```powershell
 uv run python scripts/35_preparar_laboratorio.py   # models/laboratorio/
+uv run python scripts/45_embeddings_ompal.py       # requiere OMPAL y los scripts 40 y 41
+uv run python scripts/47_detector_laboratorio.py   # models/laboratorio/detector_ompal.pt
 uv run python scripts/36_exportar_resultados.py    # datos y audios de Resultados
 cd frontend; npm run build; cd ..
 ```
