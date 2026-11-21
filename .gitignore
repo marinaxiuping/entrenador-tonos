@@ -13,4 +13,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 .serena/
-.serena/
+.pytest_cache/
+
+# Carpeta del Space de Hugging Face que monta deploy/preparar_space.py (incluye Tone Perfect)
+/deploy/hf_space/build/

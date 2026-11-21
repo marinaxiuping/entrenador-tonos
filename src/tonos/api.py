@@ -45,6 +45,9 @@ MODEL_PATH = os.environ.get("TONOS_MODEL_PATH", "models/cnn_toneperfect_praat.pt
 FRONTEND_DIR = os.environ.get("TONOS_FRONTEND_DIR", "frontend/dist")
 TONE_PERFECT_DIR = os.environ.get("TONOS_TONE_PERFECT_DIR", "data/raw/toneperfect")
 LAB_DIR = os.environ.get("TONOS_LAB_DIR", "models/laboratorio")
+LAB_DEVICE = os.environ.get("TONOS_LAB_DEVICE", "cpu")
+# En ZeroGPU no hay GPU durante el arranque: allí el precalentamiento se desactiva.
+WARM_UP_LAB = os.environ.get("TONOS_LAB_WARM_UP", "1") == "1"
 MAX_UPLOAD_BYTES = int(float(os.environ.get("TONOS_MAX_UPLOAD_MB", "5")) * 1024 * 1024)
 HEAVY_REQUESTS_PER_MINUTE = int(os.environ.get("TONOS_HEAVY_REQUESTS_PER_MINUTE", "30"))
 MAX_CALIBRATION_FILES = 12
@@ -57,8 +60,8 @@ async def lifespan(app: FastAPI):
     app.state.classifier = ToneClassifier(MODEL_PATH)
     # El laboratorio descarga HuBERT (~380 MB) la primera vez; es opcional para poder
     # desplegar solo la práctica.
-    app.state.lab = ToneJudgeLab(LAB_DIR) if os.path.isdir(LAB_DIR) else None
-    if app.state.lab is not None:
+    app.state.lab = ToneJudgeLab(LAB_DIR, LAB_DEVICE) if os.path.isdir(LAB_DIR) else None
+    if app.state.lab is not None and WARM_UP_LAB:
         # El primer juicio tarda ~10 s por la inicialización perezosa de los modelos y de WORLD:
         # se paga al arrancar y no en la primera visita.
         utterance = app.state.lab.utterance_list()[0]

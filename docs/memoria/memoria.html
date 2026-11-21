@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>¿Quién corrige el tono? Memoria del TFM</title>
+<style>
+  :root {
+    --ink: #3a2a1f;
+    --ink-soft: #6f5847;
+    --muted: #8f7a68;
+    --hairline: #dccab0;
+    --wash: #f6efe4;
+    --accent: #8b1e2d;
+    --cnn: #a8613a;
+    --frase: #d29a2e;
+    --hubert: #b02a3c;
+    --detector: #1f82b0;
+    --font-body: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-head: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, monospace;
+    --font-hanzi: "KaiTi", "STKaiti", serif;
+  }
+
+  @page {
+    size: A4;
+    margin: 22mm 21mm 24mm 21mm;
+    @bottom-left {
+      content: "¿Quién corrige el tono? · Memoria del TFM";
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #8f7a68;
+    }
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #8f7a68;
+    }
+  }
+  @page landscape {
+    size: A4 landscape;
+    margin: 16mm 20mm 18mm 20mm;
+    @bottom-left {
+      content: "¿Quién corrige el tono? · Memoria del TFM";
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #8f7a68;
+    }
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #8f7a68;
+    }
+  }
+  @page :first {
+    @bottom-left { content: none; }
+    @bottom-right { content: none; }
+  }
+
+  html { background: #fff; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: #fff;
+    font-family: var(--font-body);
+    font-size: 11pt;
+    line-height: 1.55;
+    hyphens: auto;
+    text-align: justify;
+  }
+  p { margin: 0 0 0.62em; orphans: 3; widows: 3; }
+  h1, h2, h3, .kicker, .meta, figcaption, table, .toc, .tag {
+    font-family: var(--font-head);
+    text-align: left;
+    hyphens: manual;
+  }
+  h2 {
+    font-size: 15pt;
+    font-weight: 600;
+    margin: 0 0 0.2em;
+    letter-spacing: -0.01em;
+    break-after: avoid;
+  }
+  h2 .number { color: var(--accent); margin-right: 0.35em; font-variant-numeric: tabular-nums; }
+  .tag {
+    display: block;
+    font-size: 7.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.9em;
+  }
+  h3 {
+    font-size: 10.8pt;
+    font-weight: 600;
+    margin: 1.1em 0 0.35em;
+    break-after: avoid;
+  }
+  section { margin-top: 2.1em; }
+  section.chapter { break-before: page; margin-top: 0; }
+  section.part { margin-top: 2.6em; }
+  section.part > h2, section.part > .tag { break-after: avoid; }
+  em { font-style: italic; }
+  .hanzi { font-family: var(--font-hanzi); font-size: 1.08em; }
+  .pinyin { font-family: Cambria, "Times New Roman", serif; font-style: italic; }
+  code { font-family: var(--font-mono); font-size: 0.86em; color: var(--ink-soft); }
+
+  /* Portada */
+  .cover { height: 247mm; display: flex; flex-direction: column; }
+  .cover .seal {
+    font-family: var(--font-hanzi);
+    font-size: 54pt;
+    color: var(--accent);
+    line-height: 1;
+    margin-top: 18mm;
+  }
+  .kicker {
+    font-size: 8.5pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 16mm;
+  }
+  .cover h1 {
+    font-size: 27pt;
+    line-height: 1.12;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 4mm 0 5mm;
+    max-width: 150mm;
+  }
+  .cover .subtitle {
+    font-family: var(--font-body);
+    font-size: 13pt;
+    color: var(--ink-soft);
+    max-width: 140mm;
+    text-align: left;
+    line-height: 1.4;
+  }
+  .meta {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6mm;
+    border-top: 1.2pt solid var(--ink);
+    padding-top: 4mm;
+    font-size: 8.5pt;
+  }
+  .meta dt { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 7pt; margin-bottom: 1mm; }
+  .meta dd { margin: 0; }
+
+  /* Resumen e índice */
+  .abstract h2 { font-size: 12pt; margin-top: 0; }
+  .keywords { font-family: var(--font-head); font-size: 8.5pt; color: var(--ink-soft); text-align: left; }
+  .keywords span { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 7pt; margin-right: 0.6em; }
+  .toc { list-style: none; padding: 0; margin: 0; font-size: 9.6pt; }
+  .toc li { display: grid; grid-template-columns: 9mm 1fr; padding: 1.4mm 0; border-bottom: 0.5pt solid var(--hairline); }
+  .toc .toc-number { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .toc .toc-note { color: var(--muted); font-size: 8.4pt; }
+
+  /* Figuras y tablas */
+  figure { margin: 1.1em 0 1.2em; break-inside: avoid; }
+  figure img, figure svg { display: block; width: 100%; height: auto; }
+  figcaption { font-size: 8.4pt; color: var(--ink-soft); margin-top: 2mm; line-height: 1.4; }
+  figcaption b { color: var(--ink); font-weight: 600; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.6pt;
+    margin: 0.9em 0 1.1em;
+    break-inside: avoid;
+    font-variant-numeric: tabular-nums;
+  }
+  thead th {
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1pt solid var(--ink);
+    padding: 1.3mm 2mm 1.3mm 0;
+    vertical-align: bottom;
+  }
+  tbody td, tbody th { padding: 1.2mm 2mm 1.2mm 0; border-bottom: 0.5pt solid var(--hairline); vertical-align: top; text-align: left; font-weight: normal; }
+  td.num, th.num { text-align: right; padding-right: 3mm; }
+  table caption { caption-side: bottom; text-align: left; font-size: 8.2pt; color: var(--ink-soft); padding-top: 1.6mm; }
+  .judge-dot { display: inline-block; width: 7pt; height: 7pt; border-radius: 50%; margin-right: 4pt; vertical-align: 0; }
+
+  /* Página vertical con nombre: sin ella, Edge deja apaisado lo que sigue a la página apaisada. */
+  @page portrait { size: A4 portrait; }
+  .cover, section.chapter, section.part { page: portrait; }
+  .landscape { page: landscape; }
+  .landscape figure { margin: 0; }
+  .screens { display: grid; grid-template-columns: 1fr 128mm; gap: 8mm; align-items: start; margin: 0; }
+  .screens img { display: block; width: 100%; height: auto; border: 0.5pt solid var(--hairline); }
+  .screens figcaption { margin-top: 5mm; font-size: 9pt; }
+  .thesis {
+    border-left: 2.5pt solid var(--accent);
+    padding: 1mm 0 1mm 5mm;
+    margin: 1.2em 0;
+    font-size: 11.4pt;
+    line-height: 1.45;
+  }
+  .references { font-size: 9pt; text-align: left; padding-left: 0; list-style: none; }
+  .references li { margin-bottom: 1.6mm; padding-left: 6mm; text-indent: -6mm; }
+  .annex table { font-size: 8.1pt; }
+</style>
+</head>
+<body>
+
+<!-- Portada -->
+<div class="cover">
+  <div class="seal" aria-hidden="true">声调</div>
+  <div class="kicker">Trabajo de Fin de Máster · Máster en Data Science &amp; IA</div>
+  <h1>¿Quién corrige el tono? Validez de los jueces automáticos de pronunciación del mandarín</h1>
+  <p class="subtitle">Un entrenador de tonos para hispanohablantes, y lo que se aprende al preguntar no cuánto acierta un modelo, sino si sirve para corregir a un alumno.</p>
+  <dl class="meta">
+    <div><dt>Autoría</dt><dd>Marina Xiuping Garrido Castaño</dd></div>
+    <div><dt>Centro</dt><dd>Evolve Academy</dd></div>
+    <div><dt>Fecha</dt><dd>Noviembre de 2026</dd></div>
+  </dl>
+</div>
+
+<!-- Resumen -->
+<section class="chapter abstract">
+  <h2>Resumen</h2>
+  <p>Este trabajo construye una aplicación para practicar los cuatro tonos del mandarín. El alumno graba una sílaba, ve su curva de tono frente a la objetivo, escucha su propia voz con la entonación corregida y recibe un veredicto de un clasificador. Para elegir ese clasificador se compararon tres familias de modelos (gradient boosting sobre rasgos de F0, una CNN sobre el contorno de F0 y HuBERT congelado con una sonda lineal) a lo largo de una escalera de dominio: sílabas de estudio de 6 nativos (Tone Perfect, 0,988 de accuracy con hablante no visto), habla continua de 40 nativos (AISHELL-3, donde el modelo cae a 0,566 y HuBERT llega a 0,966) y errores reales de 46 alumnos francófonos marcados por profesores (OMPAL).</p>
+  <p>El resultado central es metodológico. Los mismos jueces quedan en órdenes distintos según cómo se evalúen. Con nativos gana HuBERT. Con errores fabricados por resíntesis, cambiando el tono de una sílaba con WORLD, gana la CNN, que detecta el 67,5 % de los cambios frente al 31 % de HuBERT. Con errores reales, HuBERT vuelve a quedar primero (AUC 0,859 frente a 0,831, diferencia pareada por hablantes de +0,028 [0,016; 0,040]), y con la misma tasa de falsas alarmas los tres jueces casi empatan. Entrenar directamente la pregunta de la app con los errores de los alumnos sube la detección del 53 % al 68 % con un 10 % de falsas alarmas, en las cinco particiones oficiales del corpus. Ese mismo detector es el que peor detecta los errores fabricados. La conclusión es que la accuracy con nativos y los errores sintéticos no predicen la validez de un juez de pronunciación: hay que medirlo con errores reales.</p>
+  <p class="keywords"><span>Palabras clave</span>tonos del mandarín · corrección de pronunciación asistida por ordenador · validez de la evaluación · HuBERT · contrafactuales · F0</p>
+
+  <h2 style="margin-top:1.6em">Abstract</h2>
+  <p>This project builds an application to practise the four Mandarin tones: the learner records a syllable, compares their pitch curve with the target, hears their own voice resynthesised with the correct intonation and gets a verdict from a classifier. Three model families (gradient boosting on F0 features, a CNN on the F0 contour and frozen HuBERT with a linear probe) were compared along a domain ladder: studio syllables from 6 native speakers (Tone Perfect, 0.988 accuracy on unseen speakers), continuous speech from 40 native speakers (AISHELL-3, where the app model drops to 0.566 and HuBERT reaches 0.966) and real errors from 46 French-speaking learners annotated by teachers (OMPAL).</p>
+  <p>The main finding is methodological: the same judges rank differently depending on how they are evaluated. HuBERT wins on native speech; the CNN wins on errors fabricated by resynthesis (it detects 67.5% of tone swaps against 31% for HuBERT); on real errors HuBERT ranks first again (AUC 0.859 vs 0.831, speaker-paired difference +0.028 [0.016, 0.040]) and, at equal false-alarm rate, the three judges nearly tie. Training the app's actual question on learner errors raises detection from 53% to 68% at a 10% false-alarm rate across the corpus's five official splits, yet that detector is the worst at catching fabricated errors. Native accuracy and synthetic errors do not predict the validity of a pronunciation judge: it has to be measured on real errors.</p>
+  <p class="keywords"><span>Keywords</span>Mandarin tones · computer-assisted pronunciation training · evaluation validity · HuBERT · counterfactuals · F0</p>
+</section>
+
+<!-- Índice -->
+<section class="chapter">
+  <h2>Índice</h2>
+  <ol class="toc">
+    <li><span class="toc-number">1</span><span>Introducción</span></li>
+    <li><span class="toc-number">2</span><span>Contexto <span class="toc-note">· tonos, corrección automática y validez de la evaluación</span></span></li>
+    <li><span class="toc-number">3</span><span>Datos</span></li>
+    <li><span class="toc-number">4</span><span>Método <span class="toc-note">· F0, modelos, calibración y protocolo de evaluación</span></span></li>
+    <li><span class="toc-number">5</span><span>Del laboratorio al habla continua</span></li>
+    <li><span class="toc-number">6</span><span>Contrafactuales: borrar y cambiar el tono</span></li>
+    <li><span class="toc-number">7</span><span>Errores reales de alumnos</span></li>
+    <li><span class="toc-number">8</span><span>Tres evaluaciones, tres órdenes</span></li>
+    <li><span class="toc-number">9</span><span>La aplicación</span></li>
+    <li><span class="toc-number">10</span><span>Decisiones y límites</span></li>
+    <li><span class="toc-number">11</span><span>Conclusiones y trabajo futuro</span></li>
+    <li><span class="toc-number"></span><span>Referencias</span></li>
+    <li><span class="toc-number">A</span><span>Anexo: reproducibilidad</span></li>
+  </ol>
+
+  <section>
+    <h2><span class="number">1</span>Introducción</h2>
+    <span class="tag">Problema, pregunta y aportaciones</span>
+    <p>En mandarín, la altura de la voz distingue palabras: <span class="hanzi">妈</span> <span class="pinyin">mā</span> (madre), <span class="hanzi">麻</span> <span class="pinyin">má</span> (cáñamo), <span class="hanzi">马</span> <span class="pinyin">mǎ</span> (caballo) y <span class="hanzi">骂</span> <span class="pinyin">mà</span> (regañar) solo se diferencian por el contorno de su frecuencia fundamental (F0). Para un hispanohablante, cuya lengua usa la entonación para la frase y no para la palabra, es uno de los aspectos más difíciles de aprender, y también uno de los que menos se puede practicar sin un profesor delante. La idea de partida del proyecto era sencilla: una aplicación que escuche una sílaba, diga qué tono ha oído y enseñe cómo corregirlo.</p>
+    <p>Construirla obliga a elegir un juez, el modelo que decide si el tono es correcto, y la forma habitual de elegirlo es la accuracy con hablantes no vistos. El trabajo empezó así, con tres familias de modelos que en sílabas de estudio rozan el techo (entre 0,983 y 0,990). La pregunta cambió al subir la escalera de dominio. En habla continua el mejor modelo con diferencia era HuBERT, pero una línea base que no oye el audio y solo mira el carácter acertaba el 93,4 %. Esa cifra plantea la duda de fondo: un juez puede acertar el tono que corresponde a la palabra sin oír el tono que el alumno ha producido, y eso es justo lo que no puede hacer un corrector.</p>
+    <p>La pregunta de investigación es, por tanto, cómo se sabe si un juez automático sirve para corregir la pronunciación de los tonos, y si la accuracy con nativos lo predice. Para responderla se evaluaron los mismos jueces de tres formas: con habla nativa, con errores fabricados por ordenador y con errores reales de alumnos anotados por profesores.</p>
+    <div class="thesis">Cómo se evalúa a un juez de tonos decide qué juez parece el mejor. Con nativos, con errores fabricados y con errores reales de alumnos, los mismos jueces quedan en órdenes distintos; solo los errores reales miden lo que la aplicación necesita, y entrenar con ellos es lo que más mejora al juez.</div>
+    <p>El trabajo aporta cuatro cosas. La primera es un pipeline de F0 y tres clasificadores evaluados siempre con hablantes no vistos, con intervalos por bootstrap de hablantes. La segunda, una escalera de dominio que separa el efecto del estilo de habla del efecto del alumno, con una línea base léxica que mide cuánto se puede acertar sin oír. La tercera, dos experimentos contrafactuales y su contraste con 17.001 sílabas de alumnos reales, que invierte la conclusión de los contrafactuales. La cuarta, la aplicación, desplegada, con práctica de sílabas, voz corregida y una demo en la que cualquiera puede cambiar el tono de una frase y ver qué juez se da cuenta.</p>
+    <p>La sección 2 sitúa el trabajo. Las secciones 3 y 4 describen los datos y el método. Las secciones 5 a 7 recorren la escalera, de las sílabas de estudio a los errores reales, y la 8 reúne la tesis. La 9 describe la aplicación, la 10 las decisiones y sus límites, y la 11 cierra con las conclusiones.</p>
+  </section>
+</section>
+
+<section class="part">
+  <h2><span class="number">2</span>Contexto</h2>
+  <span class="tag">Tonos, corrección automática y validez de la evaluación</span>
+  <h3>Los tonos como contornos de F0</h3>
+  <p>Los cuatro tonos léxicos del mandarín se describen por su forma: el primero es alto y plano, el segundo sube, el tercero baja y en aislamiento vuelve a subir, y el cuarto cae desde arriba. Esa descripción vale para sílabas leídas con cuidado. En habla continua los tonos se influyen entre sí: Xu (1997) mostró que el tono anterior arrastra el inicio de cada sílaba y que el siguiente modifica su final de forma distinta, y a eso se suman reglas como el sandhi del tercer tono, que convierte un T3 seguido de otro T3 en algo parecido a un T2. El resultado práctico es que un mismo tono no tiene un contorno fijo, y que un clasificador entrenado con sílabas aisladas aprende formas que en una frase aparecen comprimidas o deformadas.</p>
+  <p>Medir esos contornos exige estimar el F0, normalmente con algoritmos como el de autocorrelación de Praat, accesible desde Python con Parselmouth (Jadoul et al., 2018). Los errores típicos son de octava, cuando el estimador elige el doble o la mitad del F0 real, y aparecen sobre todo en la zona grave y con voz rasposa, que es justo donde vive el tercer tono.</p>
+  <h3>Corrección automática de la pronunciación</h3>
+  <p>La corrección de pronunciación asistida por ordenador suele plantearse como detección y diagnóstico de errores: comparar lo que el alumno dice con lo que debería decir. Para los tonos, Li et al. (2019) entrenaron modelos de tono con etiquetas blandas, precisamente porque los tonos de los aprendices caen a menudo entre dos categorías, y añadieron contexto entre sílabas con una BLSTM. Más recientemente, Wang et al. (2024) combinan HuBERT ajustado con una rama explícita de F0 y, entrenando solo con nativos, evalúan con aprendices. Este trabajo no compite con esos sistemas en cifras: los usa como referencia de que la tarea se aborda con modelos de tono entrenados con nativos y de que el salto a los alumnos es el problema abierto.</p>
+  <p>Los modelos de habla preentrenados de forma autosupervisada, como HuBERT (Hsu et al., 2021), aprenden representaciones del audio que sirven para muchas tareas con un clasificador sencillo encima. Aquí se usa <code>chinese-hubert-base</code>, preentrenado con 10.000 horas de mandarín de WenetSpeech, congelado y con una regresión logística sobre una de sus capas. Su atractivo es evidente; su riesgo, para un corrector, es que aprende también qué palabra se dice, y la palabra delata el tono.</p>
+  <h3>Cuando un modelo acierta por el motivo equivocado</h3>
+  <p>En procesamiento del lenguaje es conocido que un modelo puede resolver una tarea con atajos. Poliak et al. (2018) mostraron que en inferencia textual un modelo que solo ve la hipótesis, sin la premisa, supera a la clase mayoritaria en varios conjuntos de datos: la tarea se puede responder sin hacer lo que se supone que mide. La línea base léxica de este trabajo cumple el mismo papel para los tonos. Kaushik et al. (2020) propusieron modificar los ejemplos lo mínimo para cambiar su etiqueta y comprobar si el modelo sigue el cambio; los contrafactuales de la sección 6 aplican esa idea al audio, cambiando solo el F0 de una sílaba con el vocoder WORLD (Morise et al., 2016). La aportación de este trabajo es contrastar esa evaluación contrafactual con errores reales, y encontrar que no la confirma.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">3</span>Datos</h2>
+  <span class="tag">Tres corpus, tres peldaños</span>
+  <p>Se usan tres corpus, cada uno para un peldaño distinto de la escalera. La tabla resume lo que aporta cada uno y con qué licencia.</p>
+  <table>
+    <thead><tr><th>Corpus</th><th>Contenido usado</th><th>Hablantes</th><th>Papel en el trabajo</th><th>Licencia</th></tr></thead>
+    <tbody>
+      <tr><td>Tone Perfect (Ryu et al.)</td><td>9.839 sílabas aisladas: 410 sílabas en los 4 tonos</td><td>6 nativos (3 mujeres, 3 hombres)</td><td>Peldaño 0, modelo de la app, voz nativa de la práctica</td><td>CC BY-NC 4.0</td></tr>
+      <tr><td>AISHELL-3 (Shi et al., 2021)</td><td>188.743 sílabas de tonos 1-4 en frases leídas</td><td>40 nativos (20 y 20)</td><td>Peldaño 1, contrafactuales, demo</td><td>Apache 2.0</td></tr>
+      <tr><td>OMPAL (Hsieh et al., 2025)</td><td>1.768 frases de alumnos y 82 de nativos, tono marcado por carácter</td><td>46 alumnos francófonos y 3 nativos</td><td>Peldaño 2: errores reales</td><td>CC BY 4.0</td></tr>
+    </tbody>
+  </table>
+  <p>Tone Perfect son grabaciones de estudio, perfectamente equilibradas (25&nbsp;% por tono), de las que solo falta una (<code>jiao1_FV3</code>). Tiene dos rasgos que condicionan todo lo demás. Solo hay seis voces, así que cada evaluación deja fuera a un hablante y la dispersión entre ellos importa tanto como la media. Y la duración depende del tono, pero también del hablante: MV1 habla tan rápido que su T3 dura menos que el T1 de FV1.</p>
+  <p>AISHELL-3 es un corpus de síntesis de voz con 85 horas de 218 nativos, transcrito en caracteres y pinyin. Se descargaron 40 hablantes, equilibrados por género, y se alinearon sílaba a sílaba con el alineador forzado de MMS (Pratap et al., 2024) para extraer cada sílaba con el mismo pipeline de F0 que Tone Perfect. Las etiquetas son los tonos realizados, con el sandhi ya aplicado, y tienen un ruido estimado del 1-2&nbsp;%.</p>
+  <p>OMPAL es el único corpus que contiene lo que la aplicación quiere detectar: alumnos que se equivocan. Tres profesores marcan cada carácter de cada frase como tono correcto o incorrecto, y el corpus trae cinco particiones oficiales que separan hablantes (42 en entrenamiento y 5 en test). No incluye los tiempos de cada sílaba, así que se alinearon igual que AISHELL-3, y la revisión a oído de 20 frases (223 sílabas, incluidas las 5 con peor puntuación del alineador) dio los cortes por buenos. Hay dos diferencias con el caso de uso que no se pueden corregir: los alumnos son francófonos, no hispanohablantes, y los caracteres tradicionales sugieren que el mandarín de referencia es el de Taiwán.</p>
+  <p>El plan inicial incluía grabar entre seis y ocho hispanohablantes con nativos que marcasen sus errores. No fue posible en el plazo del trabajo, y OMPAL es el sustituto más cercano disponible. Esa sustitución es el límite principal del trabajo y se discute en la sección 10.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">4</span>Método</h2>
+  <span class="tag">Pilar 1 · clasificación de tonos</span>
+  <h3>Del audio al contorno</h3>
+  <p>Cada grabación se carga a 16&nbsp;kHz, se recortan los silencios y se estima el F0 cada 10&nbsp;ms. Se compararon pYIN y Praat sobre 960 grabaciones de Tone Perfect: pYIN perdía el 10&nbsp;% de los T4 y recortaba su caída a unos 6 semitonos, frente a los 11 de Praat, además de cometer errores de octava completos. Praat no perdió ninguna grabación, y su defecto, los saltos de octava, se corrigió en dos pasos. El primero adapta el rango de búsqueda a cada hablante con dos pasadas, limitándolo a [0,5·Q1, 1,5·Q3] de su distribución de F0. El segundo corrige por continuidad: un salto de más de 6 semitonos entre frames consecutivos parte el contorno en tramos, y cada tramo vecino se desplaza un múltiplo de 12 semitonos para unirlo al de referencia. La corrección necesitó tres iteraciones, cada una para arreglar un error visible de la anterior, y deja un residuo aceptado del 4,4&nbsp;% de T3 y el 3,5&nbsp;% de T4 con saltos de 6-9 semitonos que no son de octava.</p>
+  <p>El F0 se expresa en semitonos respecto a la media geométrica del hablante. Esa normalización elimina la diferencia de registro entre voces y conserva la forma. En la aplicación, donde no existe esa media, el alumno graba primero <em>ma</em> en los cuatro tonos y con eso se calcula su perfil de voz. La referencia que sale de esas cuatro sílabas se desvía de la de todo el corpus hasta 2 semitonos, y eso cuesta 0,4 puntos de accuracy (0,984 frente a 0,988). Añadir sílabas con vocales altas, como <em>yi</em> o <em>wu</em>, lo empeora (0,971), porque esas vocales suben la referencia.</p>
+  <h3>Tres familias de modelos</h3>
+  <p>El primer modelo es LightGBM sobre rasgos del contorno: diez puntos remuestreados, estadísticos, pendiente, un polinomio de grado 2 y diferencias entre inicio, mitad y final. El segundo es una CNN 1D sobre el contorno remuestreado a 64 puntos y su derivada, con tres bloques convolucionales y una capa lineal sobre el mapa aplanado, sin pooling global, porque lo que separa un T2 de un T3 es dónde está el valle. Se entrena con épocas fijas y sin early stopping, para no elegir el modelo mirando al hablante de test. El tercero es HuBERT congelado con una regresión logística sobre la media de una de sus capas, elegida con validación interna sin ver el hablante de test.</p>
+  <p>Ningún modelo usa la duración. Con ella, LightGBM pasaba de 0,983 a 0,976 y clasificaba como T4 el 34&nbsp;% de los T3 de MV1, porque aprendía de los otros cinco hablantes que el T3 es largo. Un atajo así fallaría con alumnos que no hablan al ritmo de estos nativos, por una razón que no tiene nada que ver con el tono.</p>
+  <h3>Calibración</h3>
+  <p>La aplicación da feedback según la probabilidad del tono objetivo, así que esa probabilidad tiene que significar lo que dice. Se usa calibración por temperatura (Guo et al., 2017), con la temperatura de cada hablante ajustada con las predicciones de los otros cinco para no evaluarla con sus propias etiquetas. La CNN sale bien calibrada de origen (T = 1,28, ECE de 0,004 a 0,001) y LightGBM estaba sobreconfiado (T = 1,65, ECE de 0,011 a 0,002). La calibración no viaja entre dominios: en AISHELL-3, la temperatura de Tone Perfect deja un ECE de 0,322, que baja a 0,017 al reajustarla.</p>
+  <h3>Protocolo de evaluación</h3>
+  <p>Todas las cifras son con hablantes no vistos: dejando fuera un hablante por fold en Tone Perfect, repartiendo los hablantes en cinco folds en AISHELL-3 y con las particiones oficiales en OMPAL. Los intervalos de confianza al 95&nbsp;% se calculan remuestreando hablantes, no sílabas, porque la unidad independiente es el hablante y remuestrear sílabas daría intervalos falsamente estrechos. Cuando se comparan dos jueces, ambos usan los mismos remuestreos, y el intervalo de la diferencia es pareado. Los entrenamientos de las redes del peldaño 1 y del contrafactual se repitieron con tres semillas: las tasas varían como mucho 0,007 (desviación típica) y el orden de los jueces se mantiene en las tres.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">5</span>Del laboratorio al habla continua</h2>
+  <span class="tag">Peldaños 0 y 1 · Tone Perfect y AISHELL-3</span>
+  <p>En Tone Perfect los tres modelos están en el techo: LightGBM 0,983 ± 0,014, la CNN 0,988 ± 0,012 y HuBERT 0,990 ± 0,011, con un hablante fuera por fold. La diferencia entre los dos mejores es del orden de la variación entre semillas, y sus errores son casi disjuntos: de los 121 de la CNN y los 98 de HuBERT solo dos son comunes. Para la aplicación se eligió la CNN calibrada. Pesa 113&nbsp;KB frente a los cerca de 380&nbsp;MB de HuBERT, y el contorno que clasifica es el mismo que se le enseña al alumno junto al contorno objetivo.</p>
+  <p>Esas cifras son de laboratorio. El primer peldaño mantiene a hablantes que pronuncian bien y cambia solo el estilo de habla: las mismas sílabas, extraídas de frases leídas de AISHELL-3 con el mismo pipeline. La figura 1 recorre lo que ocurre.</p>
+  <figure>
+    <img src="figuras/escalera.svg" alt="Accuracy en Tone Perfect, en AISHELL-3 con distintos entrenamientos y con contexto, y de la línea base léxica">
+    <figcaption><b>Figura 1.</b> Accuracy con hablantes no vistos en cada peldaño. El modelo de la app cae de 0,988 a 0,566 en habla continua; entrenar en el dominio recupera hasta 0,768, el contexto de la frase llega a 0,833 y HuBERT a 0,966. La barra rayada no oye el audio: predice el tono más frecuente de cada carácter. Fuente: scripts 29 y 32.</figcaption>
+  </figure>
+  <p>Sin reentrenar, el modelo de la app acierta el 0,566 y el recall del T2 se hunde a 0,19. La causa se ve en los contornos: en habla continua se comprimen unas cuatro veces. El recorrido medio del T4 pasa de 10,7 a 2,8 semitonos y el del T2 de 6,7 a 1,0, y el T3 pierde la subida final que lo caracteriza en aislamiento (figura 2). Entrenar con AISHELL-3 recupera el rendimiento hasta 0,748 con tantos datos como Tone Perfect, y solo hasta 0,768 con catorce veces más. Una curva de aprendizaje con 4, 8 y 16 hablantes (0,736, 0,750 y 0,765, en un solo fold) apunta en la misma dirección: los datos aportan poco, y el techo de unos 0,77 es de la representación. Un contorno de una sílaba, sin saber qué hay alrededor, no basta. Los peores casos son la última sílaba de la frase (0,63), las más cortas (menos de 181&nbsp;ms) y el T3 (0,63).</p>
+  <figure>
+    <img src="figuras/compresion_contornos.svg" alt="Contorno medio de cada tono en Tone Perfect y en AISHELL-3">
+    <figcaption><b>Figura 2.</b> Contorno medio de cada tono, en semitonos respecto a la media del hablante y con el mismo pipeline de F0: sílabas de estudio de Tone Perfect (9.839) frente a habla continua de AISHELL-3 (188.743). En una frase, el T2 apenas sube, el T4 apenas cae y el T3 no vuelve a subir.</figcaption>
+  </figure>
+  <p>Añadir contexto ayuda de forma clara. Ver la sílaba anterior y la siguiente sube a 0,813 (+4,4 puntos [3,9; 4,9]), una BiGRU sobre las CNN de toda la frase llega a 0,833 (+6,5 [5,9; 7,0]) y HuBERT, que ve todo el audio, a 0,966. Hasta aquí la historia sería la habitual: más contexto, mejor modelo.</p>
+  <p>La línea base léxica la complica. Prediciendo para cada carácter su tono más frecuente en el entrenamiento, sin oír nada, se acierta el 93,4&nbsp;%. HuBERT queda solo tres puntos por encima de un modelo sordo. Hay un indicio de que oye algo más: donde el léxico falla por el sandhi del tercer tono (0,79), HuBERT se mantiene en 0,96. Pero la regla del sandhi también se deduce del carácter siguiente, que HuBERT reconoce. La accuracy no puede separar «oye el tono» de «sabe qué palabra es», y para una aplicación que corrige esa es la única diferencia que importa. Hace falta intervenir sobre el audio.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">6</span>Contrafactuales: borrar y cambiar el tono</h2>
+  <span class="tag">Peldaño 1 · intervenir sobre el audio</span>
+  <p>Un contrafactual modifica la entrada lo mínimo para cambiar la respuesta correcta y comprueba si el modelo sigue el cambio. Con WORLD se puede descomponer una grabación en F0, envolvente espectral y aperiodicidad, tocar solo el F0 y volver a sintetizar. Los dos experimentos usan 2.400 frases de AISHELL-3, con clasificadores que no han visto a su hablante, y dos controles: una resíntesis sin tocar el F0, que mide los artefactos del vocoder, y una comprobación de que la manipulación hizo lo que se pretendía.</p>
+  <h3>Borrar el tono</h3>
+  <p>El primero aplana el F0 de frases enteras. La manipulación funciona: la dispersión del F0 pasa de 2,96 a 0,12 semitonos. HuBERT acierta el 0,964 con el audio original, el 0,953 con la resíntesis sin cambios y el 0,693 con el F0 plano, una caída de 27,1 puntos [25,4; 28,7]. HuBERT sí usa el pitch, por tanto, pero sin ninguna información tonal sigue acertando casi siete de cada diez sílabas. Parte de eso es léxico, parte son pistas que WORLD conserva (duración, intensidad, la voz rasposa del T3) y parte es un sesgo: un F0 plano suena a primer tono, por eso el T1 se queda en 0,88 y el T3 cae a 0,44. El experimento no separa esas tres partes.</p>
+  <h3>Cambiar el tono de una sílaba</h3>
+  <p>El segundo reproduce el error de un alumno. En cada frase se elige una sílaba al azar y se le impone el contorno real de otro tono, tomado de un hablante de otro fold, sin tocar el resto. Un buen juez debería seguir al tono impuesto. Se descartó imponer la media de cada tono porque es un prototipo limpio que favorece a los modelos de F0: en una prueba preliminar la CNN detectaba así el 96&nbsp;% de los cambios. El contorno reextraído tras la manipulación queda a 0,44 semitonos del impuesto y a 3,04 del original.</p>
+  <table>
+    <thead><tr><th>Juez</th><th class="num">Acierta con nativos</th><th class="num">Detecta el cambio</th><th class="num">Deja pasar el error</th></tr></thead>
+    <tbody>
+      <tr><td><span class="judge-dot" style="background:var(--cnn)"></span>CNN por sílaba</td><td class="num">0,761</td><td class="num">0,675</td><td class="num">0,100</td></tr>
+      <tr><td><span class="judge-dot" style="background:var(--frase)"></span>CNN + BiGRU</td><td class="num">0,833</td><td class="num">0,598</td><td class="num">0,143</td></tr>
+      <tr><td><span class="judge-dot" style="background:var(--hubert)"></span>HuBERT</td><td class="num">0,968</td><td class="num">0,310</td><td class="num">0,474</td></tr>
+      <tr><td>Léxico, sin audio</td><td class="num">0,925</td><td class="num">0,022</td><td class="num">0,925</td></tr>
+    </tbody>
+    <caption>Tabla 1. Contrafactual de cambio de tono sobre 2.400 frases de AISHELL-3. «Deja pasar el error» es responder con el tono original, el que corresponde a la palabra. Fuente: script 34; estable en tres semillas.</caption>
+  </table>
+  <p>El orden se invierte respecto a la accuracy. El juez que más acierta con nativos es el que más errores deja pasar: HuBERT responde con el tono que toca según la palabra en el 47&nbsp;% de los casos. La CNN por sílaba, la peor con nativos, detecta dos de cada tres cambios. En todos los pares de tonos la CNN detecta más que la BiGRU y esta más que HuBERT, y el patrón se repite en las tres semillas. Con estos datos, la conclusión parecía clara: cuanto más contexto y léxico usa un juez, peor corrige, y el mejor corrector es el más simple. La sección siguiente pone esa conclusión a prueba con errores de verdad.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">7</span>Errores reales de alumnos</h2>
+  <span class="tag">Peldaño 2 · OMPAL</span>
+  <p>Un error fabricado cambia solo el F0 de la sílaba de un nativo; todo lo demás sigue sonando a nativo. Un alumno que se equivoca de tono probablemente no hace eso: puede dudar, alargar la sílaba o articularla a medias. OMPAL permite medir a los mismos jueces, entrenados con AISHELL-3 y sin haber visto a ningún hablante del corpus, con 17.001 sílabas de alumnos de las que 2.389 (el 14,1&nbsp;%) tienen el tono mal según la mayoría de los tres profesores. Se excluyen las 526 sílabas de T3 ante T3, en las que no se sabe si lo correcto era T2 o T3.</p>
+  <h3>Los jueces ante errores reales</h3>
+  <table>
+    <thead><tr><th>Juez</th><th class="num">Detecta el error</th><th class="num">Falsa alarma (alumnos)</th><th class="num">Falsa alarma (nativos)</th><th class="num">AUC</th></tr></thead>
+    <tbody>
+      <tr><td><span class="judge-dot" style="background:var(--cnn)"></span>CNN por sílaba</td><td class="num">0,890</td><td class="num">0,417</td><td class="num">0,383</td><td class="num">0,831</td></tr>
+      <tr><td><span class="judge-dot" style="background:var(--frase)"></span>CNN + BiGRU</td><td class="num">0,889</td><td class="num">0,405</td><td class="num">0,325</td><td class="num">0,830</td></tr>
+      <tr><td><span class="judge-dot" style="background:var(--hubert)"></span>HuBERT</td><td class="num">0,854</td><td class="num">0,250</td><td class="num">0,097</td><td class="num">0,859</td></tr>
+    </tbody>
+    <caption>Tabla 2. Jueces sin entrenar con alumnos, avisando cuando el tono más probable no es el esperado. La AUC usa 1 − p(tono esperado) y no depende del umbral. Fuente: script 41.</caption>
+  </table>
+  <p>El resultado contradice al contrafactual. HuBERT es el que mejor separa los tonos bien dichos de los mal dichos, detecta casi lo mismo que la CNN y molesta mucho menos al que lo dice bien: avisa en el 25&nbsp;% de las sílabas correctas de los alumnos frente al 42&nbsp;%, y en el 10&nbsp;% de las de nativos frente al 38&nbsp;%. La ventaja en AUC es pequeña pero no es ruido. Con los mismos remuestreos de hablantes, HuBERT supera a la CNN en +0,028 [0,016; 0,040] y a la BiGRU en +0,029, mientras que la CNN y la BiGRU son indistinguibles. El defecto que el contrafactual atribuía a HuBERT tampoco aparece por otra vía. Si decidiera por la palabra, debería dejar pasar más errores cuando la consonante y la vocal están bien dichas, porque entonces la palabra se reconoce, y ocurre lo contrario: detecta el 86&nbsp;% con los segmentos bien y el 78&nbsp;% con los segmentos mal.</p>
+  <p>La etiqueta tiene sus propios límites. Los profesores coinciden poco entre sí (kappa de Cohen medio de 0,45); HuBERT llega a 0,35 con cada uno y la CNN a 0,22. Un profesor comparado con los otros dos detecta solo el 58&nbsp;% de los errores con un 5&nbsp;% de falsas alarmas: los profesores avisan mucho menos que cualquier juez automático. Se asume, sin poder verificarlo, que la posición de cada voto en el fichero corresponde siempre al mismo profesor.</p>
+  <h3>Con la misma falsa alarma, los jueces se parecen</h3>
+  <p>Avisar cuando el tono más probable no es el esperado pone a cada juez en un punto de trabajo distinto: la CNN avisa mucho y HuBERT poco. Para compararlos en igualdad, se fijó para cada juez el umbral que da un 10&nbsp;% de falsas alarmas en el entrenamiento de cada partición oficial, y se midió en su test. Con ese criterio, la CNN detecta el 52&nbsp;% de los errores, la BiGRU el 49&nbsp;% y HuBERT el 53&nbsp;%; con un 20&nbsp;% de falsas alarmas, el 71, el 69 y el 78&nbsp;%. Buena parte de la ventaja de HuBERT es de punto de trabajo, no de separar mejor. El criterio de la falsa alarma, y no el de maximizar la detección, responde a una decisión de producto: un corrector que marca como error una de cada cuatro sílabas bien dichas desanima al alumno. Pedir pocas falsas alarmas cuesta caro: al 10&nbsp;%, los tres dejan pasar casi la mitad de los errores.</p>
+  <h3>Entrenar con errores reales</h3>
+  <p>Ningún juez había oído a un alumno al entrenar. El paso natural es entrenar directamente la pregunta de la aplicación, «¿lleva esta sílaba el tono esperado?», con la etiqueta de los profesores. Se usó una regresión logística por tono esperado sobre el embedding congelado de HuBERT, con la regularización elegida por validación cruzada agrupada por hablante y el umbral fijado con predicciones fuera de fold, en las que cada fold elige también su propia regularización. No se ajustó HuBERT: 46 alumnos y unos 2.400 errores no dan para ajustar 95 millones de parámetros sin sobreajustar.</p>
+  <figure>
+    <img src="figuras/detector_particiones.svg" alt="Detección en cada partición del juez HuBERT y del detector entrenado con alumnos">
+    <figcaption><b>Figura 3.</b> Errores detectados con un 10&nbsp;% de falsas alarmas en el test de cada partición oficial de OMPAL: HuBERT sin entrenar con alumnos y el detector entrenado con ellos sobre el mismo embedding. El detector gana en las cinco. Fuente: script 46.</figcaption>
+  </figure>
+  <p>El detector detecta el 68&nbsp;% de los errores con un 10&nbsp;% de falsas alarmas, frente al 53&nbsp;% del juez HuBERT, y su AUC media por partición pasa de 0,851 a 0,880. Recombinar las probabilidades de los tres jueces existentes da la mitad de esa mejora (61&nbsp;%), y añadir el contorno de F0 al embedding no aporta nada (66&nbsp;%). La falsa alarma real en el test oscila entre 0,07 y 0,16 para un objetivo de 0,10, porque cada test tiene solo cuatro alumnos. Entrenado con los 46, el detector de la aplicación da fuera de fold una AUC de 0,890 y detecta el 69&nbsp;% con el 10&nbsp;% de falsas alarmas.</p>
+  <h3>Y el juez de la práctica</h3>
+  <p>La práctica de la aplicación juzga sílabas sueltas con la CNN de Tone Perfect, y OMPAL no tiene sílabas sueltas: su frase más corta tiene cinco. Lo único que se puede medir es una cota inferior, aplicando el mismo modelo y la misma regla a las sílabas de sus frases. En ese formato el juez no sirve: con los nativos de OMPAL acierta el 52&nbsp;%, así que el salto de dominio domina el resultado, y con los alumnos su AUC es 0,780, por debajo de la CNN entrenada con AISHELL-3 (diferencia pareada −0,052 [−0,063; −0,041]). Esto no dice cómo se porta con una sílaba suelta, que es lo que graba un alumno en la práctica, y deja a la vista el límite más incómodo del trabajo: el juez del producto no tiene ninguna validación con errores reales en su propio formato.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">8</span>Tres evaluaciones, tres órdenes</h2>
+  <span class="tag">La tesis</span>
+  <p>La figura 4 reúne a los mismos jueces medidos de las tres formas. Para que el detector se compare con los demás en las mismas condiciones, el panel de errores reales usa la AUC media en el test de las cinco particiones; con todos los alumnos juntos (tabla 2) el orden es el mismo.</p>
+  <figure>
+    <img src="figuras/tres_evaluaciones.svg" alt="Los mismos jueces medidos con nativos, con errores fabricados y con errores reales">
+    <figcaption><b>Figura 4.</b> Accuracy con nativos y detección de errores fabricados en las 2.400 frases del contrafactual (script 34); AUC con errores reales, media por partición de OMPAL (script 46). El detector entrenado con alumnos no se midió en el contrafactual de 34. Cada panel tiene su propia escala.</figcaption>
+  </figure>
+  <p>Con nativos el orden es HuBERT, BiGRU, CNN. Con errores fabricados se invierte: CNN, BiGRU, HuBERT. Con errores reales HuBERT vuelve a quedar primero, por poco, y con la misma tasa de falsas alarmas los tres casi empatan. El detector entrenado con alumnos completa el cuadro de la forma más clara. Es el mejor con errores reales y, en las frases de la demo de la aplicación, el que menos cambios fabricados detecta: el 30&nbsp;%, frente al 52&nbsp;% de HuBERT y el 88&nbsp;% de la CNN. Aprendió cómo suena un alumno que se equivoca, y un tono trasplantado sobre la voz de un nativo no se parece a eso.</p>
+  <div class="thesis">Cómo se evalúa a un juez de tonos decide qué juez parece el mejor. Solo los errores reales miden lo que una aplicación de corrección necesita, y entrenar con ellos es lo que más mejora al juez.</div>
+  <p>De la hipótesis inicial del trabajo se conserva que la accuracy con nativos no mide la validez de un juez. Se cae la explicación que daba el contrafactual, que HuBERT deja pasar los errores porque decide por el léxico: era un efecto de cómo se fabricaban los errores. Y se añade que, con errores reales, gran parte de la diferencia entre jueces depende del umbral, y que la mejora grande no viene de cambiar de arquitectura sino de entrenar con los errores que se quieren detectar.</p>
+  <p>Queda una explicación de por qué se invierte el orden, que este trabajo no verifica. WORLD cambia solo el F0 y deja intactos la duración, la intensidad y la articulación de nativo, así que un modelo como HuBERT, que integra todas esas pistas, recibe señales contradictorias y se queda con la mayoría, que dice «correcto». En un error real, el alumno que no está seguro del tono probablemente también duda o alarga la sílaba, y esas pistas apuntan en la misma dirección que el F0. Es la misma lección que Kaushik et al. (2020) encontraron en texto, ahora en audio: los modelos entrenados o evaluados con una distribución de ejemplos se comportan de otra forma con la contraria.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">9</span>La aplicación</h2>
+  <span class="tag">Pilares A y producto · práctica, voz corregida y demo</span>
+  <p>La aplicación tiene tres pestañas. «Practicar» es el producto: el alumno calibra su voz con <em>ma</em> en los cuatro tonos, elige una de las 1.243 combinaciones de sílaba y tono de Tone Perfect que son palabras reales, puede escuchar antes una guía tarareada del tono a la altura de su propia voz, graba y recibe el veredicto, su curva frente a la objetivo, un consejo sobre la forma del contorno, la voz de un nativo y su propia voz corregida. «¿Quién corrige?» es la demo del hallazgo: frases de AISHELL-3 de hablantes que ningún modelo vio, en las que cualquiera puede cambiar el tono de una sílaba con WORLD y ver qué dicen los cinco jueces (las dos CNN, HuBERT, el detector entrenado con alumnos y el léxico). «Resultados» resume las cifras de este documento, leídas de las salidas de los experimentos y no copiadas a mano. La figura 6, en la página apaisada que sigue a las conclusiones, muestra la práctica y un juicio de la demo.</p>
+  <figure>
+    <svg viewBox="0 0 640 250" role="img" aria-label="Arquitectura de la aplicación">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6f5847"/>
+        </marker>
+      </defs>
+      <style>
+        .box { fill: #fbf6ed; stroke: #c9a77f; stroke-width: 1; }
+        .box-accent { fill: #f1dcd5; stroke: #8b1e2d; stroke-width: 1; }
+        .lane { font: 600 9px "Segoe UI", Arial, sans-serif; fill: #8b1e2d; letter-spacing: 0.08em; }
+        .label { font: 9.5px "Segoe UI", Arial, sans-serif; fill: #3a2a1f; }
+        .small { font: 8px "Segoe UI", Arial, sans-serif; fill: #6f5847; }
+        .edge { stroke: #6f5847; stroke-width: 1; fill: none; marker-end: url(#arrow); }
+        .sep { stroke: #dccab0; stroke-width: 0.8; stroke-dasharray: 3 3; }
+      </style>
+      <text class="lane" x="0" y="14">PRACTICAR</text>
+      <rect class="box" x="0" y="24" width="92" height="42" rx="3"/><text class="label" x="8" y="42">Grabación</text><text class="small" x="8" y="56">del navegador → WAV</text>
+      <rect class="box" x="112" y="24" width="110" height="42" rx="3"/><text class="label" x="120" y="42">F0 con Praat</text><text class="small" x="120" y="56">perfil de voz, octavas</text>
+      <rect class="box" x="242" y="24" width="104" height="42" rx="3"/><text class="label" x="250" y="42">Contorno</text><text class="small" x="250" y="56">64 puntos, semitonos</text>
+      <rect class="box-accent" x="366" y="24" width="122" height="42" rx="3"/><text class="label" x="374" y="42">CNN Tone Perfect</text><text class="small" x="374" y="56">calibrada (T = 1,28)</text>
+      <rect class="box" x="508" y="24" width="132" height="42" rx="3"/><text class="label" x="516" y="42">Veredicto y curva</text><text class="small" x="516" y="56">frente al contorno objetivo</text>
+      <path class="edge" d="M92,45 H110"/><path class="edge" d="M222,45 H240"/><path class="edge" d="M346,45 H364"/><path class="edge" d="M488,45 H506"/>
+      <rect class="box" x="366" y="80" width="274" height="30" rx="3"/><text class="label" x="374" y="99">WORLD: tu voz con el F0 del tono objetivo</text>
+      <path class="edge" d="M167,66 V95 H364"/>
+      <line class="sep" x1="0" y1="124" x2="640" y2="124"/>
+      <text class="lane" x="0" y="144">¿QUIÉN CORRIGE?</text>
+      <rect class="box" x="0" y="154" width="118" height="42" rx="3"/><text class="label" x="8" y="172">Frase de AISHELL-3</text><text class="small" x="8" y="186">hablante no visto</text>
+      <rect class="box" x="138" y="154" width="150" height="42" rx="3"/><text class="label" x="146" y="172">WORLD impone otro tono</text><text class="small" x="146" y="186">contorno real de otra voz</text>
+      <rect class="box-accent" x="308" y="154" width="332" height="42" rx="3"/><text class="label" x="316" y="172">Cinco jueces: CNN · CNN + BiGRU · HuBERT · detector · léxico</text><text class="small" x="316" y="186">HuBERT y el detector en GPU en el Space (@spaces.GPU)</text>
+      <path class="edge" d="M118,175 H136"/><path class="edge" d="M288,175 H306"/>
+      <text class="small" x="0" y="228">FastAPI sirve la API en /api y el frontend React compilado en /, desde el mismo origen. Despliegue: imagen Docker o Space de Hugging Face con ZeroGPU.</text>
+    </svg>
+    <figcaption><b>Figura 5.</b> Flujo de las dos pestañas con modelo. La práctica no necesita GPU ni HuBERT; la demo sí.</figcaption>
+  </figure>
+  <p>La voz corregida descompone la grabación con WORLD, sustituye solo el F0 de los frames con voz por el contorno objetivo expresado respecto a la media del alumno y vuelve a sintetizar, de modo que suena como él mismo diciendo el tono correcto y no como un nativo. En 2.400 resíntesis, una CNN que no había visto al hablante reconoce el tono objetivo en el 99,8&nbsp;% y el F0 queda a 0,2 semitonos del pedido. Es una medida circular, porque un clasificador de F0 reconoce casi por construcción la plantilla que se le ha impuesto, y no dice cómo suena; una evaluación con oyentes queda pendiente. El alcance proponía predecir el contorno objetivo a partir del rango y la duración del alumno, en lugar de usar una plantilla fija; con cinco hablantes de entrenamiento no la supera (2,18 frente a 2,13 semitonos de error), y la aplicación usa la plantilla.</p>
+  <p>La aplicación tiene una API en FastAPI que no guarda estado, un frontend en React y Vite, límite de peticiones por cliente en las rutas pesadas y 47 tests, entre ellos los de la capa HTTP con dobles de los modelos para no descargar HuBERT. Un flujo de integración continua los ejecuta en Linux con torch de CPU y compila el frontend. Se despliega de dos formas. La imagen Docker (4,3&nbsp;GB, con HuBERT incluido) se probó en local con un juicio de la demo de 0,18&nbsp;s. Como los Spaces con Docker son de pago, la versión pública es un Space de Hugging Face con el hardware gratuito ZeroGPU, que construye con Python 3.10 y exige al menos una función que use la GPU. El juicio de la demo corre allí en GPU, con un primer juicio de 4,4&nbsp;s mientras se asigna y 1,3&nbsp;s los siguientes, y el análisis de una grabación tarda 4,6&nbsp;s.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">10</span>Decisiones y límites</h2>
+  <span class="tag">Lo que se eligió, por qué y lo que queda fuera</span>
+  <table>
+    <thead><tr><th style="width:30%">Decisión</th><th style="width:40%">Motivo</th><th>Alternativa descartada</th></tr></thead>
+    <tbody>
+      <tr><td>Praat con rango por hablante y corrección por continuidad</td><td>Ninguna grabación perdida; corrige octavas sin tocar caídas reales</td><td>pYIN (perdía el 10&nbsp;% de los T4)</td></tr>
+      <tr><td>Sin duración en ningún modelo</td><td>Atajo que no transfiere: 34&nbsp;% de los T3 de MV1 como T4</td><td>Usarla (−0,007 en el total, −0,054 en MV1)</td></tr>
+      <tr><td>Evaluar siempre con hablantes no vistos e intervalos por hablante</td><td>El hablante es la unidad independiente</td><td>Splits aleatorios; bootstrap de sílabas</td></tr>
+      <tr><td>Línea base léxica sin audio</td><td>Es el atajo que un modelo de habla puede explotar</td><td>Comparar los modelos solo entre sí</td></tr>
+      <tr><td>Contorno impuesto real y de otra voz en los contrafactuales</td><td>La media del tono inflaba la detección de la CNN hasta el 96&nbsp;%</td><td>Imponer el prototipo del tono</td></tr>
+      <tr><td>Umbral por falsa alarma objetivo con alumnos</td><td>Compara en el mismo punto de trabajo y protege al alumno</td><td>Avisar con el tono más probable</td></tr>
+      <tr><td>Detector lineal sobre HuBERT congelado</td><td>46 alumnos no dan para ajustar 95 M de parámetros</td><td>Ajuste fino de HuBERT</td></tr>
+      <tr><td>CNN de Tone Perfect como juez de la práctica</td><td>Único juez de sílaba suelta; 113&nbsp;KB e interpretable</td><td>Cambiar de juez sin datos de sílaba suelta con alumnos</td></tr>
+      <tr><td>Space con ZeroGPU y el juicio de la demo en GPU</td><td>Docker es de pago; ZeroGPU es gratuito y exige usar la GPU</td><td>Static (sin práctica), pago</td></tr>
+    </tbody>
+  </table>
+  <p>El límite principal es que no hay hispanohablantes. La aplicación se diseñó para ellos y la validación con errores reales se hizo con 46 francófonos que leen frases, probablemente en mandarín de Taiwán. Que los resultados se trasladen a hispanohablantes es una suposición razonable, porque ninguna de las dos lenguas es tonal, pero es una suposición. El segundo es que el juez de la práctica no está validado con errores reales en su formato, la sílaba suelta: la cota de la sección 7 dice que fuera de ese formato no sirve, no cómo funciona dentro.</p>
+  <p>El tamaño efectivo de las muestras es el número de hablantes, no de sílabas: 6 en Tone Perfect, 40 en AISHELL-3 y 46 alumnos en OMPAL, con test de cuatro alumnos y casi siempre el mismo nativo en cada partición. Las diferencias pequeñas entre jueces, aunque tengan intervalo, dependen de esos hablantes. La etiqueta de error es ruidosa (kappa 0,45 entre profesores) y el alineamiento de OMPAL se revisó con un veredicto global, sin una cifra sílaba a sílaba.</p>
+  <p>Los contrafactuales no son errores reales, y OMPAL lo confirma en lugar de solo sugerirlo. Además, en las frases de la demo los jueces detectan más cambios que en el experimento de 2.400 frases (la CNN, 88&nbsp;% frente a 67,5&nbsp;%). Una parte se debía a que la demo imponía el contorno prototípico de cada tono, ya corregido, pero la diferencia que queda no la explican ni el criterio de selección de frases ni los hablantes de la demo. La cifra de referencia es la del experimento, y las de la demo solo sirven para comparar el orden de los jueces. La voz corregida solo se ha evaluado de forma objetiva y circular, y el consejo que da la práctica es una regla sobre la forma del contorno sin probar con alumnos.</p>
+  <p>Del alcance inicial quedaron fuera el modo juego controlado por la voz y el motor adaptativo, que eran escaparate y opcional respectivamente, para dedicar el tiempo a la validación con errores reales.</p>
+</section>
+
+<section class="part">
+  <h2><span class="number">11</span>Conclusiones y trabajo futuro</h2>
+  <span class="tag">Qué se responde y qué queda abierto</span>
+  <p>El trabajo empezó como una aplicación con un clasificador y terminó como una pregunta sobre cómo se evalúa un corrector. Un clasificador de tonos con 0,988 de accuracy en sílabas de estudio cae a 0,566 en habla continua, y el mejor modelo en ese dominio, HuBERT, queda solo tres puntos por encima de una línea base que no oye. Los contrafactuales parecían demostrar que ese modelo decide por la palabra y deja pasar los errores, y que el corrector bueno era el más simple. Los errores reales de 46 alumnos dicen otra cosa: HuBERT separa algo mejor los tonos bien y mal dichos, con muchas menos falsas alarmas, y con el mismo nivel de avisos los jueces casi empatan. Lo que mejora de verdad es entrenar con los errores que se quieren detectar, que lleva la detección del 53 al 68&nbsp;% sin aumentar las falsas alarmas.</p>
+  <p>La consecuencia para quien construya un sistema de corrección es concreta. Elegir el juez por su accuracy con nativos lleva a uno; elegirlo con errores fabricados, a otro; y ninguno de los dos criterios predice el comportamiento con alumnos. Hacen falta errores reales, aunque sean pocos, y conviene usarlos también para entrenar. Unas decenas de alumnos marcados por profesores bastaron aquí para mejorar al juez en las cinco particiones.</p>
+  <p>El trabajo futuro sigue de esa conclusión. Lo primero es grabar a hispanohablantes con nativos que marquen sus errores, que era el plan original y es la validación que falta, en sílabas sueltas para validar el juez de la práctica y en frases para el detector. Con esos datos se podría entrenar un detector propio de errores de hispanohablantes y recalibrar la aplicación con ellos. En el modelado, quedan por probar el ajuste fino de HuBERT con multitarea (tono con nativos y error con alumnos), una suma ponderada aprendida de sus capas en lugar de una sola, y entrenar con errores fabricados para medir en OMPAL si mejoran la detección de errores reales; si no lo hacen, sería una prueba más de la tesis. En la aplicación quedan la evaluación de la voz corregida con oyentes, el consejo de la práctica probado con alumnos y el modo juego.</p>
+</section>
+
+  <div class="landscape">
+  <figure class="screens">
+    <div class="screens-left">
+      <img src="figuras/app_practicar.jpg" alt="Pestaña Practicar: elección de sílaba y tono, guía tarareada y voz nativa">
+      <figcaption><b>Figura 6.</b> La aplicación. A la izquierda, la práctica tras calibrar la voz: el alumno elige sílaba y tono, y puede escuchar la melodía del tono a su altura o a un nativo antes de grabar. A la derecha, un juicio de «¿Quién corrige?»: el T3 de <span class="hanzi">我</span> <span class="pinyin">wǒ</span> cambiado a T1. Las dos CNN detectan el cambio y HuBERT, el detector entrenado con alumnos y el léxico lo dejan pasar.</figcaption>
+    </div>
+    <img class="screens-right" src="figuras/app_quien_corrige.jpg" alt="Pestaña ¿Quién corrige?: contorno de la sílaba cambiada y veredicto de los cinco jueces">
+  </figure>
+  </div>
+
+<section class="chapter">
+  <h2>Referencias</h2>
+  <ul class="references">
+    <li>Guo, C., Pleiss, G., Sun, Y. y Weinberger, K. Q. (2017). On Calibration of Modern Neural Networks. <em>Proceedings of ICML 2017</em>, PMLR 70, 1321-1330.</li>
+    <li>Hsieh et al. (2025). OMPAL: Bridging Speech and Learning with an Open-Source Mandarin Pronunciation Assessment Corpus for Global Learners. <em>Proceedings of Interspeech 2025</em>, 2415-2419. doi:10.21437/Interspeech.2025-983.</li>
+    <li>Hsu, W.-N., Bolte, B., Tsai, Y.-H. H., Lakhotia, K., Salakhutdinov, R. y Mohamed, A. (2021). HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units. <em>IEEE/ACM Transactions on Audio, Speech, and Language Processing</em>, 29, 3451-3460.</li>
+    <li>Jadoul, Y., Thompson, B. y de Boer, B. (2018). Introducing Parselmouth: A Python interface to Praat. <em>Journal of Phonetics</em>, 71, 1-15. doi:10.1016/j.wocn.2018.07.001.</li>
+    <li>Kaushik, D., Hovy, E. y Lipton, Z. C. (2020). Learning the Difference That Makes a Difference with Counterfactually-Augmented Data. <em>International Conference on Learning Representations (ICLR 2020)</em>.</li>
+    <li>Li, W., Chen, N. F., Siniscalchi, S. M. y Lee, C.-H. (2019). Improving Mandarin Tone Mispronunciation Detection for Non-Native Learners with Soft-Target Tone Labels and BLSTM-Based Deep Tone Models. <em>IEEE/ACM Transactions on Audio, Speech, and Language Processing</em>, 27(12), 2012-2024. doi:10.1109/TASLP.2019.2936755.</li>
+    <li>Morise, M., Yokomori, F. y Ozawa, K. (2016). WORLD: A Vocoder-Based High-Quality Speech Synthesis System for Real-Time Applications. <em>IEICE Transactions on Information and Systems</em>, E99-D(7), 1877-1884. doi:10.1587/transinf.2015EDP7457.</li>
+    <li>Poliak, A., Naradowsky, J., Haldar, A., Rudinger, R. y Van Durme, B. (2018). Hypothesis Only Baselines in Natural Language Inference. <em>Proceedings of *SEM 2018</em>, 180-191. doi:10.18653/v1/S18-2023.</li>
+    <li>Pratap, V. et al. (2024). Scaling Speech Technology to 1,000+ Languages. <em>Journal of Machine Learning Research</em>, 25(97), 1-52.</li>
+    <li>Ryu, C., Mandarin Tone Perception &amp; Production Team y Michigan State University Libraries. <em>Tone Perfect: Multimodal Database for Mandarin Chinese</em>. https://tone.lib.msu.edu. Licencia CC BY-NC 4.0.</li>
+    <li>Shi, Y., Bu, H., Xu, X., Zhang, S. y Li, M. (2021). AISHELL-3: A Multi-Speaker Mandarin TTS Corpus. <em>Proceedings of Interspeech 2021</em>. doi:10.21437/Interspeech.2021-755.</li>
+    <li>TencentGameMate. <em>chinese-hubert-base</em>: HuBERT base preentrenado con 10.000 horas de WenetSpeech. https://huggingface.co/TencentGameMate/chinese-hubert-base (revisión fce0375).</li>
+    <li>Wang, X., Shi, M. y Wang, Y. (2024). Pitch-Aware RNN-T for Mandarin Chinese Mispronunciation Detection and Diagnosis. <em>Proceedings of Interspeech 2024</em>. arXiv:2406.04595.</li>
+    <li>Xu, Y. (1997). Contextual tonal variations in Mandarin. <em>Journal of Phonetics</em>, 25, 61-83.</li>
+  </ul>
+</section>
+
+<section class="chapter annex">
+  <h2><span class="number">A</span>Anexo: reproducibilidad</h2>
+  <span class="tag">Del clon del repositorio a cada cifra</span>
+  <p>El repositorio se instala con <code>uv sync</code>, que reproduce las versiones exactas de <code>uv.lock</code>, y cada cifra de este documento sale de un script numerado que lee los datos y escribe en <code>outputs/</code>. Los corpus no se versionan por su tamaño y licencia, y hay que descargarlos aparte. Los dos notebooks (<code>01_tone_perfect_pipeline</code> y <code>02_escalera_dominio</code>) explican cada paso y leen esas salidas sin volver a ejecutar los pasos pesados. La tabla da el orden y lo que produce cada grupo.</p>
+  <table>
+    <thead><tr><th style="width:18%">Scripts</th><th>Qué hacen</th><th style="width:22%">Secciones</th></tr></thead>
+    <tbody>
+      <tr><td>01-03, 21-23</td><td>Tone Perfect: exploración, F0 con corrección de octava, rasgos, LightGBM, calibración y CNN</td><td>4, 5</td></tr>
+      <tr><td>04, 24</td><td>Embeddings de HuBERT y sonda lineal en Tone Perfect</td><td>5</td></tr>
+      <tr><td>25-28</td><td>Modelo de la app, voz corregida, contorno personalizado y perfil de voz</td><td>4, 9</td></tr>
+      <tr><td>09-12, 15, 16</td><td>AISHELL-3: selección y descarga de hablantes, alineamiento, contornos y embeddings</td><td>3, 5</td></tr>
+      <tr><td>29-32, 37, 39</td><td>Escalera de dominio, contexto, HuBERT, línea base léxica, curva por hablantes y semillas</td><td>5</td></tr>
+      <tr><td>33, 34</td><td>Contrafactuales de F0 plano y cambio de tono</td><td>6</td></tr>
+      <tr><td>40-44</td><td>OMPAL: alineamiento, jueces, revisión del alineamiento, profesores, AUC pareada y umbral</td><td>3, 7</td></tr>
+      <tr><td>45-49</td><td>Embeddings de OMPAL, detector por partición, detector de la demo, errores fabricados y cota del juez de la práctica</td><td>7, 8</td></tr>
+      <tr><td>05-07, 35, 36</td><td>Datos del frontend, paquete de la demo y pestaña de resultados</td><td>9</td></tr>
+      <tr><td>38</td><td>Genera el notebook 02 (se ejecuta después con nbconvert)</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p>Las figuras de esta memoria salen de <code>docs/memoria/figuras.py</code>, que lee las mismas salidas. La aplicación se arranca en local con <code>uv run uvicorn tonos.api:app</code> tras compilar el frontend; la imagen Docker y el Space de Hugging Face se describen en el README, junto con el script que monta el Space (<code>deploy/preparar_space.py</code>). Los tests se ejecutan con <code>uv run pytest</code>.</p>
+  <p>Licencias de los datos: Tone Perfect se redistribuye en la aplicación con atribución y sin uso comercial (CC BY-NC 4.0), lo que condiciona el uso del despliegue público; AISHELL-3 es Apache 2.0 y OMPAL CC BY 4.0, ambos con atribución en la aplicación.</p>
+</section>
+
+</body>
+</html>

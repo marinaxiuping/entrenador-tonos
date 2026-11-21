@@ -107,7 +107,7 @@ Un 0,988 con hablante no visto en Tone Perfect solo dice que el modelo distingue
 
 Para atribuir la caída al dominio, la entrada del modelo tiene que construirse **exactamente igual** en los dos corpus (`15_contornos_aishell3.py`):
 
-- **Sílabas del alineamiento de AISHELL-3 (scripts 09-12).** 40 hablantes (20 mujeres y 20 hombres) alineados con MMS_FA y `fill_gaps` (ver `docs/corpus-bisilabos.md`). Las etiquetas son tonos *realizados*, con el sandhi incluido.
+- **Sílabas del alineamiento de AISHELL-3 (scripts 09-12).** 40 hablantes (20 mujeres y 20 hombres) alineados con MMS_FA y `fill_gaps` (ver `docs/planificacion/corpus-bisilabos.md`). Las etiquetas son tonos *realizados*, con el sandhi incluido.
 - **F0 con Praat sobre la frase completa** y después cortado por sílaba. Praat necesita contexto en los bordes; cortar antes estropearía el principio y el final de cada sílaba, que es justo donde está el movimiento tonal.
 - **Rango por hablante en dos pasadas, `fix_octave_jumps` por sílaba, semitonos respecto a la media del hablante y 64 puntos**, como en Tone Perfect.
 - **Un error que habría invalidado todo.** Praat no empieza sus frames en t = 0 sino a media ventana del inicio, y la ventana depende del suelo de F0. Sin corregirlo, los tiempos del alineamiento caían 2-3 frames desplazados sobre el F0, del orden del 10 % de una sílaba de 220 ms. `f0_on_frame_grid` coloca el F0 en la rejilla de 10 ms que empieza en t = 0.

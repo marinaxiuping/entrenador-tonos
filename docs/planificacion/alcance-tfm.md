@@ -34,7 +34,7 @@ Fine-tuning de wav2vec2, generador de contornos seq2seq/VAE, DKT, bandit, ONNX e
 
 ## Datos
 - **Monosílabos:** Tone Perfect (Michigan State University).
-- **Bisílabos — DECIDIDO (15 nov): SÍ, con AISHELL-3.** Etiquetas de tono realizado (sandhi incluido), 211k bisílabos de 172 hablantes, alineamiento silábico con torchaudio MMS_FA. Detalles en [docs/corpus-bisilabos.md](docs/corpus-bisilabos.md).
+- **Bisílabos — DECIDIDO (15 nov): SÍ, con AISHELL-3.** Etiquetas de tono realizado (sandhi incluido), 211k bisílabos de 172 hablantes, alineamiento silábico con torchaudio MMS_FA. Detalles en [corpus-bisilabos.md](corpus-bisilabos.md).
 - **Tone Perfect:** acceso solicitado por formulario (15 nov). Si no hay respuesta antes del 22 nov → monosílabos sacados de las sílabas alineadas de AISHELL-3.
 - **Test propio:** 6–8 hispanohablantes que hayan estudiado chino. Reclutar ya y grabar en la semana 1. Recoger el consentimiento.
 

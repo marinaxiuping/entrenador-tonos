@@ -101,8 +101,9 @@ class ToneJudgeLab:
     def utterance_list(self) -> list[dict]:
         return list(self.utterances.values())
 
-    def judge(self, utterance_id: str, syllable_index: int, imposed_tone: int | None) -> JudgeResult:
-        """Juicio de los cinco jueces sobre una sílaba, con su tono original o con ``imposed_tone``."""
+    def validate_request(self, utterance_id: str, syllable_index: int, imposed_tone: int | None) -> None:
+        """LabRequestError si la frase, la sílaba o el tono no valen. Se puede llamar antes de
+        ``judge`` donde el juicio corre en otro proceso (ZeroGPU) y la excepción no llegaría como tal."""
         utterance = self.utterances.get(utterance_id)
         if utterance is None:
             raise LabRequestError(f"frase desconocida: {utterance_id}")
@@ -114,6 +115,11 @@ class ToneJudgeLab:
         if imposed_tone is not None and (imposed_tone not in self.tones or imposed_tone == syllable["tone"]):
             raise LabRequestError(f"el tono impuesto debe ser uno de {self.tones} distinto del original")
 
+    def judge(self, utterance_id: str, syllable_index: int, imposed_tone: int | None) -> JudgeResult:
+        """Juicio de los cinco jueces sobre una sílaba, con su tono original o con ``imposed_tone``."""
+        self.validate_request(utterance_id, syllable_index, imposed_tone)
+        utterance = self.utterances[utterance_id]
+        syllable = utterance["syllables"][syllable_index]
         profile = self.profiles[utterance["speaker"]]
         spans = [(s["start"], s["end"]) for s in utterance["syllables"]]
         original = self._waveform(utterance_id)
