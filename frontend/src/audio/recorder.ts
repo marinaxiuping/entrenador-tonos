@@ -1,5 +1,11 @@
 import { encodeWav, mixToMono } from "./wav";
 
+// El procesado de voz del navegador (supresión de ruido, control de ganancia) altera
+// el pitch y la energía, así que se desactiva.
+export const RAW_VOICE_CONSTRAINTS: MediaStreamConstraints = {
+  audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+};
+
 export interface RecordingSession {
   /** Para la grabación y devuelve el audio como WAV. */
   stop: () => Promise<Blob>;
@@ -13,11 +19,7 @@ export async function startRecording(): Promise<RecordingSession> {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     throw new RecordingUnavailableError();
   }
-  // El procesado de voz del navegador (supresión de ruido, control de ganancia) altera
-  // el pitch y la energía, así que se desactiva.
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-  });
+  const stream = await navigator.mediaDevices.getUserMedia(RAW_VOICE_CONSTRAINTS);
   const releaseMicrophone = () => stream.getTracks().forEach((track) => track.stop());
   let recorder: MediaRecorder;
   try {

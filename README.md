@@ -13,6 +13,7 @@ Cómo se evalúa a un juez de tonos decide qué juez parece el mejor. Con nativo
 ## La aplicación
 
 - **Practicar:** calibras tu voz con *ma* en los cuatro tonos, eliges una sílaba, grabas y ves tu curva de tono frente a la objetivo, el veredicto de una CNN calibrada, la voz de un nativo y tu propia voz corregida con WORLD.
+- **Jugar:** cantas la sílaba y un personaje sigue tu voz sobre la curva del tono objetivo; el navegador estima el pitch con YIN y puntúa cuánto del recorrido pasaste dentro del margen. No usa el modelo.
 - **¿Quién corrige?:** cambias el tono de una sílaba en una frase real de AISHELL-3 y ves qué dicen cinco jueces: CNN por sílaba, CNN + BiGRU, HuBERT, un detector entrenado con errores reales de alumnos y una línea base léxica que no oye el audio.
 - **Resultados:** las cifras del trabajo, leídas de las salidas de los experimentos.
 

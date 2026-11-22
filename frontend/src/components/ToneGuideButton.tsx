@@ -4,10 +4,11 @@ import { playToneGuide } from "../audio/toneGuide";
 interface ToneGuideButtonProps {
   tone: number;
   referenceHz: number;
+  disabled?: boolean;
 }
 
 /** Reproduce la melodía del tono objetivo a la altura de la voz del usuario, para imitarla. */
-export function ToneGuideButton({ tone, referenceHz }: ToneGuideButtonProps) {
+export function ToneGuideButton({ tone, referenceHz, disabled = false }: ToneGuideButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +26,7 @@ export function ToneGuideButton({ tone, referenceHz }: ToneGuideButtonProps) {
 
   return (
     <div className="tone-guide">
-      <button type="button" className="secondary" onClick={play} disabled={isPlaying}>
+      <button type="button" className="secondary" onClick={play} disabled={isPlaying || disabled}>
         {isPlaying ? "Sonando…" : `Escuchar la melodía del tono ${tone}`}
       </button>
       <p className="muted small">Un tarareo con la forma del tono, a la altura de tu voz. No es la pronunciación de la sílaba.</p>

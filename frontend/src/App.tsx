@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { SpeakerProfile } from "./api";
 import { CalibrationStep } from "./components/CalibrationStep";
+import { GameStep } from "./components/GameStep";
 import { LabStep } from "./components/LabStep";
 import { PracticeStep } from "./components/PracticeStep";
 import { ResultsStep } from "./components/ResultsStep";
@@ -8,6 +9,7 @@ import { clearProfile, loadProfile, saveProfile } from "./profileStorage";
 
 const TABS = [
   { id: "practice", label: "Practicar" },
+  { id: "game", label: "Jugar" },
   { id: "lab", label: "¿Quién corrige?" },
   { id: "results", label: "Resultados" },
 ] as const;
@@ -57,12 +59,9 @@ export function App() {
           </div>
         </div>
       </header>
-      {tab === "practice" &&
-        (profile ? (
-          <PracticeStep profile={profile} onRecalibrate={handleRecalibrate} />
-        ) : (
-          <CalibrationStep onCalibrated={handleCalibrated} />
-        ))}
+      {(tab === "practice" || tab === "game") && !profile && <CalibrationStep onCalibrated={handleCalibrated} />}
+      {tab === "practice" && profile && <PracticeStep profile={profile} onRecalibrate={handleRecalibrate} />}
+      {tab === "game" && profile && <GameStep profile={profile} onRecalibrate={handleRecalibrate} />}
       {tab === "lab" && <LabStep />}
       {tab === "results" && <ResultsStep />}
     </main>
