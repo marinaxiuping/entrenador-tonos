@@ -1,54 +1,126 @@
-import { useState } from "react";
-import type { SpeakerProfile } from "../api";
-import { toneGuide } from "../audio/toneGuide";
-import { TONES, TONE_NAMES, randomPracticeItem, toneEntry } from "../syllables";
-import { ROUNDS_PER_GAME, TIME_STRETCH, axisFor, describeScore } from "../toneGame";
-import { GameTrack } from "./GameTrack";
+import { useEffect, useRef, useState } from "react";
+import { analyze, type SpeakerProfile } from "../api";
+import { loadRecord, saveRecord } from "../recordStorage";
+import { TONE_NAMES, type Tone } from "../syllables";
+import { STARTING_LIVES, createRoom, doorFor, type Room, type RoomRecord } from "../toneRooms";
+import { GameOver } from "./GameOver";
+import { NativeVoice } from "./NativeVoice";
+import { RecordButton } from "./RecordButton";
+import { RoomScene, type DoorState } from "./RoomScene";
 import { ToneGuideButton } from "./ToneGuideButton";
-import { ToneShape } from "./ToneShape";
 
 interface GameStepProps {
   profile: SpeakerProfile;
   onRecalibrate: () => void;
 }
 
-const AXIS = axisFor(TONES.map((tone) => toneGuide(tone).contour_st));
+type GamePhase = "playing" | "analyzing" | "opening" | "over";
 
-const newRounds = () => Array.from({ length: ROUNDS_PER_GAME }, randomPracticeItem);
-const asPercent = (score: number) => `${Math.round(score * 100)} %`;
+interface Feedback {
+  kind: "ok" | "ko" | "info";
+  text: string;
+}
+
+// Tiempo para ver la puerta abrirse antes de pasar a la siguiente habitación.
+const DOOR_ANIMATION_MS = 1500;
 
 export function GameStep({ profile, onRecalibrate }: GameStepProps) {
-  const [rounds, setRounds] = useState(newRounds);
-  const [roundIndex, setRoundIndex] = useState(0);
-  const [scores, setScores] = useState<number[]>([]);
-  // Cambia en cada intento para que la pista empiece de cero al repetir la ronda.
-  const [attempt, setAttempt] = useState(0);
-  // El micrófono no cancela el eco: la guía sonando arrancaría el recorrido y puntuaría sola.
-  const [isListening, setIsListening] = useState(false);
+  const [room, setRoom] = useState<Room>(() => createRoom());
+  // Cuenta todas las habitaciones visitadas, también las de la trampa: identifica la escena.
+  const [roomsVisited, setRoomsVisited] = useState(1);
+  const [roomsPassed, setRoomsPassed] = useState(0);
+  const [lives, setLives] = useState(STARTING_LIVES);
+  const [heardTones, setHeardTones] = useState<number[]>([]);
+  const [history, setHistory] = useState<RoomRecord[]>([]);
+  const [phase, setPhase] = useState<GamePhase>("playing");
+  const [openedDoor, setOpenedDoor] = useState<{ side: Room["targetSide"]; state: Exclude<DoorState, "closed"> } | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [record, setRecord] = useState(loadRecord);
+  const [isNewRecord, setIsNewRecord] = useState(false);
+  const transitionRef = useRef<number | undefined>(undefined);
 
-  const { syllable, tone } = rounds[roundIndex];
-  const entry = toneEntry(syllable, tone);
-  const guide = toneGuide(tone);
-  const roundScore = scores[roundIndex];
-  const isScored = roundScore !== undefined;
-  const isLastRound = roundIndex === ROUNDS_PER_GAME - 1;
-  const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  useEffect(() => () => window.clearTimeout(transitionRef.current), []);
 
-  const retryRound = () => {
-    setScores(scores.slice(0, roundIndex));
-    setAttempt(attempt + 1);
+  const enterNextRoom = () => {
+    setRoom(createRoom());
+    setRoomsVisited((count) => count + 1);
+    setHeardTones([]);
+    setOpenedDoor(null);
+    setFeedback(null);
+    setPhase("playing");
   };
 
-  const nextRound = () => {
-    setRoundIndex(roundIndex + 1);
-    setAttempt(attempt + 1);
+  const finishGame = (finalRoomsPassed: number) => {
+    if (finalRoomsPassed > record) {
+      saveRecord(finalRoomsPassed);
+      setRecord(finalRoomsPassed);
+      setIsNewRecord(true);
+    }
+    setPhase("over");
+  };
+
+  const leaveRoom = (outcome: RoomRecord["outcome"], tonesHeard: number[]) => {
+    setHistory((current) => [...current, { room, heardTones: tonesHeard, outcome }]);
+    const passed = roomsPassed + (outcome === "target" ? 1 : 0);
+    const livesLeft = lives - (outcome === "decoy" ? 1 : 0);
+    // La vida se pierde a la vista; el contador de habitaciones sube al cruzar la puerta.
+    setLives(livesLeft);
+    transitionRef.current = window.setTimeout(() => {
+      setRoomsPassed(passed);
+      if (livesLeft === 0) finishGame(passed);
+      else enterNextRoom();
+    }, DOOR_ANIMATION_MS);
+  };
+
+  const submit = async (recording: Blob) => {
+    setPhase("analyzing");
+    setFeedback(null);
+    let heard: number;
+    try {
+      heard = (await analyze(recording, profile, room.target)).tone;
+    } catch (failure) {
+      setFeedback({ kind: "info", text: failure instanceof Error ? failure.message : "No se pudo analizar la grabación." });
+      setPhase("playing");
+      return;
+    }
+    const tonesHeard = [...heardTones, heard];
+    setHeardTones(tonesHeard);
+    const outcome = doorFor(room, heard);
+    if (outcome === "none") {
+      // Un tono que no está en ninguna puerta también es un error: cuesta una vida, pero no hay
+      // puerta que cruzar y se sigue en la misma habitación.
+      const livesLeft = lives - 1;
+      setLives(livesLeft);
+      setFeedback({
+        kind: "ko",
+        text: `Se ha oído el tono ${heard} (${TONE_NAMES[heard as Tone]}), que no abre ninguna puerta. Pierdes una vida.`,
+      });
+      if (livesLeft > 0) {
+        setPhase("playing");
+        return;
+      }
+      setPhase("opening");
+      setHistory((current) => [...current, { room, heardTones: tonesHeard, outcome }]);
+      transitionRef.current = window.setTimeout(() => finishGame(roomsPassed), DOOR_ANIMATION_MS);
+      return;
+    }
+    const decoySide = room.targetSide === "left" ? "right" : "left";
+    setOpenedDoor(outcome === "target" ? { side: room.targetSide, state: "open" } : { side: decoySide, state: "trap" });
+    setFeedback(
+      outcome === "target"
+        ? { kind: "ok", text: "¡Bien dicho! La puerta se abre." }
+        : { kind: "ko", text: `Se ha oído el tono ${heard}: era la puerta trampa. Pierdes una vida.` },
+    );
+    setPhase("opening");
+    leaveRoom(outcome, tonesHeard);
   };
 
   const restart = () => {
-    setRounds(newRounds());
-    setRoundIndex(0);
-    setScores([]);
-    setAttempt(attempt + 1);
+    setRoomsPassed(0);
+    setLives(STARTING_LIVES);
+    setHistory([]);
+    setIsNewRecord(false);
+    enterNextRoom();
   };
 
   return (
@@ -56,69 +128,65 @@ export function GameStep({ profile, onRecalibrate }: GameStepProps) {
       <div className="card-header">
         <div>
           <p className="kicker">Juego</p>
-          <h2>Sigue la curva</h2>
+          <h2>Las habitaciones</h2>
         </div>
         <button type="button" className="link" onClick={onRecalibrate}>
           Volver a calibrar
         </button>
       </div>
-      <p>
-        Canta la sílaba alargándola y lleva al personaje por la curva del tono. El recorrido va más lento que el
-        habla para que te dé tiempo a corregirte. La puntuación la calcula el navegador comparando tu voz con la
-        curva, no el modelo de la práctica.
-      </p>
 
-      <div className="game-round">
-        <p className="label">
-          Ronda {roundIndex + 1} de {ROUNDS_PER_GAME}
-        </p>
-        <div className="game-target">
-          <ToneShape tone={tone} />
-          <span className="syllable">
-            {entry?.pinyin}
-            {entry && entry.characters.length > 0 && <span className="characters">{entry.characters.join(" ")}</span>}
-          </span>
-          <span className="tone-name">T{tone} · {TONE_NAMES[tone]}</span>
-        </div>
-        <ToneGuideButton tone={tone} referenceHz={profile.reference_hz} disabled={isListening} />
-      </div>
+      {phase === "over" ? (
+        <GameOver history={history} roomsPassed={roomsPassed} record={record} isNewRecord={isNewRecord} onRestart={restart} />
+      ) : (
+        <>
+          <p>
+            Cada habitación tiene dos puertas, cada una con un tono. Di la sílaba del cartel: si el modelo de la práctica
+            oye su tono, se abre la puerta buena; si oye el de la otra, caes en la trampa y pierdes una vida, y
+            cualquier otro tono también te cuesta una. Llega tan lejos como puedas.
+          </p>
 
-      <GameTrack
-        key={attempt}
-        contour={guide.contour_st}
-        durationS={guide.duration_s * TIME_STRETCH}
-        axis={AXIS}
-        profile={profile}
-        onFinished={(score) => setScores([...scores.slice(0, roundIndex), score])}
-        onListeningChange={setIsListening}
-      />
+          <div className="room-hud">
+            <span className="room-hud-depth">Habitación {roomsPassed + 1}</span>
+            <span className="room-hud-lives" aria-label={`${lives} vidas de ${STARTING_LIVES}`}>
+              {Array.from({ length: STARTING_LIVES }, (_, i) => (
+                <span key={i} className={i < lives ? "life" : "life is-lost"} aria-hidden="true">♥</span>
+              ))}
+            </span>
+            <span className="room-hud-record">Récord: {record}</span>
+          </div>
 
-      {isScored && (
-        <div className="game-score" role="status">
-          <p className="game-score-value">{asPercent(roundScore)}</p>
-          <p>{describeScore(roundScore)}</p>
-          <div className="game-actions">
-            <button type="button" className="secondary" onClick={retryRound}>
-              Repetir ronda
-            </button>
-            {!isLastRound && (
-              <button type="button" className="primary" onClick={nextRound}>
-                Siguiente ronda
-              </button>
+          {/* key: cada habitación nueva entra con su animación y con las puertas cerradas */}
+          <RoomScene key={roomsVisited} room={room} openedDoor={openedDoor} />
+
+          <div className="room-controls">
+            <RecordButton
+              label="Pronunciar"
+              onRecorded={submit}
+              onError={(text) => setFeedback({ kind: "info", text })}
+              disabled={phase !== "playing"}
+              isProminent
+            />
+            {phase === "analyzing" && <p className="muted">Escuchando…</p>}
+            {feedback && (
+              <p className={`room-feedback is-${feedback.kind}`} role="status">
+                {feedback.text}
+              </p>
             )}
           </div>
-        </div>
-      )}
 
-      {isScored && isLastRound && (
-        <div className="game-summary">
-          <p className="label">Partida terminada</p>
-          <p className="game-score-value">{asPercent(average)}</p>
-          <p className="muted">Media de las {ROUNDS_PER_GAME} rondas.</p>
-          <button type="button" className="primary" onClick={restart}>
-            Jugar otra vez
-          </button>
-        </div>
+          <details className="room-help">
+            <summary>¿Cómo suena?</summary>
+            <div className="listen-panel">
+              <ToneGuideButton tone={room.target} referenceHz={profile.reference_hz} disabled={phase !== "playing"} />
+              <NativeVoice
+                key={`${room.syllable.syllable}${room.target}`}
+                syllable={room.syllable.syllable}
+                tone={room.target}
+                referenceHz={profile.reference_hz}
+              />
+            </div>
+          </details>
+        </>
       )}
     </section>
   );

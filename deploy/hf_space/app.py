@@ -9,9 +9,12 @@ Las rutas por defecto de tonos.api (models/, frontend/dist/, data/raw/toneperfec
 la estructura que monta deploy/preparar_space.py.
 """
 
+import asyncio
 import os
+from contextlib import asynccontextmanager
 
 import spaces  # Antes que torch: en ZeroGPU parchea CUDA al importarse.
+from spaces.zero import zerogpu_startup
 
 ON_ZERO_GPU = os.environ.get("SPACES_ZERO_GPU", "").lower() in {"1", "true"}
 # tonos.api lee la configuración al importarse: hay que fijarla antes.
@@ -39,6 +42,22 @@ def judge(self: ToneJudgeLab, utterance_id: str, syllable_index: int, imposed_to
 
 
 ToneJudgeLab.judge = judge
+
+api_lifespan = api.app.router.lifespan_context
+
+
+@asynccontextmanager
+async def lifespan_with_zero_gpu_report(app):
+    async with api_lifespan(app):
+        # ZeroGPU exige un aviso al arrancar, con los modelos ya en «cuda», para registrar las
+        # funciones @spaces.GPU. Gradio lo manda al lanzar su servidor; aquí no hay Gradio y, sin
+        # el aviso, el Space se para con «No @spaces.GPU function detected during startup».
+        if ON_ZERO_GPU:
+            await asyncio.to_thread(zerogpu_startup)
+        yield
+
+
+api.app.router.lifespan_context = lifespan_with_zero_gpu_report
 
 if __name__ == "__main__":
     print(f"ZeroGPU: {ON_ZERO_GPU} | dispositivo de la demo: {os.environ['TONOS_LAB_DEVICE']}", flush=True)

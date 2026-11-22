@@ -1,6 +1,6 @@
 import toneGuideData from "../data/tone_guide.json";
 
-export interface ToneGuide {
+interface ToneGuide {
   contour_st: number[];
   duration_s: number;
 }
@@ -17,12 +17,6 @@ const PEAK_GAIN = 0.25;
 const HUM_HARMONICS = 12;
 const FILTER_HARMONICS = 2.5;
 
-export function toneGuide(tone: number): ToneGuide {
-  const guide = TONE_GUIDES[String(tone)];
-  if (!guide) throw new Error(`No hay guía para el tono ${tone}`);
-  return guide;
-}
-
 let sharedContext: AudioContext | null = null;
 
 function audioContext(): AudioContext {
@@ -32,7 +26,8 @@ function audioContext(): AudioContext {
 
 /** Tararea el contorno del tono a la altura de la voz del usuario y resuelve al terminar. */
 export async function playToneGuide(tone: number, referenceHz: number): Promise<void> {
-  const guide = toneGuide(tone);
+  const guide = TONE_GUIDES[String(tone)];
+  if (!guide) throw new Error(`No hay guía para el tono ${tone}`);
   const context = audioContext();
   // Los navegadores suspenden el contexto hasta un gesto del usuario.
   if (context.state === "suspended") await context.resume();
