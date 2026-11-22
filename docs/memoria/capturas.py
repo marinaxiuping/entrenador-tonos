@@ -104,7 +104,8 @@ with sync_playwright() as playwright:
     game.wait_for_timeout(1800)
     game.locator(".record-button").click()
     game.wait_for_selector(".room-feedback", timeout=30_000)
-    game.wait_for_timeout(1000)  # La puerta tarda en abrirse.
-    save_region(game, ".room-scene", ".room-scene", "app_jugar")
+    # La puerta tarda en abrirse, y a los 0,9 s la escena empieza a entrar por ella.
+    game.wait_for_timeout(700)
+    save_region(game, ".room-viewport", ".room-viewport", "app_jugar")
     browser.close()
 print(f"Capturas en {out}")

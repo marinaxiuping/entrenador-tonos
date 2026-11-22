@@ -2,12 +2,12 @@
 
 El detalle de cada paso está en los notebooks (`01` Tone Perfect, `02` escalera de dominio, OMPAL y tesis) y en la memoria (`docs/memoria/memoria.pdf`). Las decisiones con fecha y motivo, en `decisions.md`.
 
-## Estado (2026-11-21): listo para entregar, salvo lo de «Pendiente»
+## Estado (2026-11-22): listo para entregar
 - Experimentos cerrados: peldaño 0 (Tone Perfect), peldaño 1 (AISHELL-3, contexto, léxico, contrafactuales, 3 semillas) y peldaño 2 (OMPAL: jueces, profesores, AUC pareada, umbral, detector, cota del juez de Practicar). Scripts 01-49.
 - Tesis (en `decisions.md`, notebook 02 sección 9, Resultados y memoria): cómo se evalúa a un juez decide cuál parece mejor; solo los errores reales miden lo que la app necesita.
 - App: Practicar, Jugar, «¿Quién corrige?» (5 jueces, el detector entrenado con OMPAL incluido) y Resultados. Local, imagen Docker y Space de Hugging Face con ZeroGPU (`Eskarcho/entrenador-tonos`), funcionando.
 - Memoria: `docs/memoria/` (HTML → PDF con Edge, 20 páginas, figuras de `figuras.py`, capturas de `capturas.py`, referencias verificadas en `sources/`).
-- Calidad: 47 tests, CI en `.github/workflows/ci.yml` (simulado en contenedor; sin probar en GitHub).
+- Calidad: 47 tests, CI en `.github/workflows/ci.yml`, pasa en GitHub (2026-11-22). Acciones subidas a versiones con Node 24 (checkout v5, setup-node v5, setup-python v6).
 
 ## Sesión del 2026-11-21 (resumen)
 Alineamiento de OMPAL dado por bueno a oído; umbral por partición (`44`); detector entrenado con alumnos (`45`-`47`) e integrado en la demo; errores fabricados en la demo (`48`); tesis reformulada y llevada al notebook 02 y a Resultados; auditoría (donantes de la demo, AUC pareada, fuga de C, cota del juez de Practicar `49`, tests de API y evaluación, CI, imagen Docker, precalentamiento); despliegue en Hugging Face con ZeroGPU; memoria completa con referencias verificadas; repo organizado para la entrega. Commits hechos por la usuaria: `d0e65b7`; lo posterior está sin commit (comandos en la última respuesta de la sesión).
@@ -19,8 +19,8 @@ Alineamiento de OMPAL dado por bueno a oído; umbral por partición (`44`); dete
 - OMPAL (17.001 sílabas, 46 alumnos): AUC CNN 0,831 · frase 0,830 · HuBERT 0,859 (HuBERT − CNN +0,028 [0,016; 0,040]). Al 10 % de falsa alarma: 0,52 / 0,49 / 0,53; detector entrenado con alumnos 0,68 (gana en las 5 particiones). Juez de Practicar en habla continua: AUC 0,780 (solo cota).
 
 ## Pendiente para la entrega
-- Juego «Las habitaciones» (2026-11-22): sustituye al de seguir la curva (ese está en el commit `a71b2ae`). Juzga el modelo de Practicar (`/api/analyze`); probado de punta a punta con voces de Tone Perfect como micrófono simulado (a3 abre la buena, a1 cae en la trampa del T1, a2 no abre ninguna y, desde el cambio de regla, también quita vida). Memoria actualizada (sección 9, figura 7, tabla de decisiones, límites, resumen; 20 páginas). Space: arreglado el arranque en ZeroGPU y desplegado con este juego. Probado por la usuaria con micrófono real: funciona.
-- Subir el repo a GitHub (`git remote add origin <url>`, `git push -u origin main`) y ver que el CI pasa.
+- Juego «Las habitaciones» (2026-11-22): sustituye al de seguir la curva (ese está en el commit `a71b2ae`). Juzga el modelo de Practicar (`/api/analyze`); probado de punta a punta con voces de Tone Perfect como micrófono simulado (a3 abre la buena, a1 cae en la trampa del T1, a2 no abre ninguna y, desde el cambio de regla, también quita vida). Memoria actualizada (sección 9, figura 7, tabla de decisiones, límites, resumen; 20 páginas). Estética de casa china tradicional añadida después y subida al Space. Space: arreglado el arranque en ZeroGPU. Probado por la usuaria con micrófono real: funciona.
+- Repo en GitHub (`origin`), CI en verde. Nada pendiente para la entrega del 2026-12-12.
 
 Hecho el 2026-11-22 (según la usuaria): Space público comprobado sin sesión, memoria revisada, app probada con micrófono en Chrome, Firefox y Safari.
 

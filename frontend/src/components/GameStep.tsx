@@ -4,9 +4,10 @@ import { loadRecord, saveRecord } from "../recordStorage";
 import { TONE_NAMES, type Tone } from "../syllables";
 import { STARTING_LIVES, createRoom, doorFor, type Room, type RoomRecord } from "../toneRooms";
 import { GameOver } from "./GameOver";
+import { Lantern } from "./Lantern";
 import { NativeVoice } from "./NativeVoice";
 import { RecordButton } from "./RecordButton";
-import { RoomScene, type DoorState } from "./RoomScene";
+import { RoomScene, type DoorState, type Verdict } from "./RoomScene";
 import { ToneGuideButton } from "./ToneGuideButton";
 
 interface GameStepProps {
@@ -21,8 +22,8 @@ interface Feedback {
   text: string;
 }
 
-// Tiempo para ver la puerta abrirse antes de pasar a la siguiente habitación.
-const DOOR_ANIMATION_MS = 1500;
+// Tiempo para ver la puerta abrirse y cruzarla antes de pasar a la siguiente habitación.
+const DOOR_ANIMATION_MS = 1900;
 
 export function GameStep({ profile, onRecalibrate }: GameStepProps) {
   const [room, setRoom] = useState<Room>(() => createRoom());
@@ -38,6 +39,7 @@ export function GameStep({ profile, onRecalibrate }: GameStepProps) {
   const [record, setRecord] = useState(loadRecord);
   const [isNewRecord, setIsNewRecord] = useState(false);
   const transitionRef = useRef<number | undefined>(undefined);
+  const verdict: Verdict | null = feedback?.kind === "ok" ? "right" : feedback?.kind === "ko" ? "wrong" : null;
 
   useEffect(() => () => window.clearTimeout(transitionRef.current), []);
 
@@ -149,14 +151,14 @@ export function GameStep({ profile, onRecalibrate }: GameStepProps) {
             <span className="room-hud-depth">Habitación {roomsPassed + 1}</span>
             <span className="room-hud-lives" aria-label={`${lives} vidas de ${STARTING_LIVES}`}>
               {Array.from({ length: STARTING_LIVES }, (_, i) => (
-                <span key={i} className={i < lives ? "life" : "life is-lost"} aria-hidden="true">♥</span>
+                <Lantern key={i} isLit={i < lives} />
               ))}
             </span>
             <span className="room-hud-record">Récord: {record}</span>
           </div>
 
           {/* key: cada habitación nueva entra con su animación y con las puertas cerradas */}
-          <RoomScene key={roomsVisited} room={room} openedDoor={openedDoor} />
+          <RoomScene key={roomsVisited} room={room} openedDoor={openedDoor} verdict={verdict} attempt={heardTones.length} />
 
           <div className="room-controls">
             <RecordButton
