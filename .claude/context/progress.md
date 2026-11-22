@@ -6,7 +6,7 @@ El detalle de cada paso está en los notebooks (`01` Tone Perfect, `02` escalera
 - Experimentos cerrados: peldaño 0 (Tone Perfect), peldaño 1 (AISHELL-3, contexto, léxico, contrafactuales, 3 semillas) y peldaño 2 (OMPAL: jueces, profesores, AUC pareada, umbral, detector, cota del juez de Practicar). Scripts 01-49.
 - Tesis (en `decisions.md`, notebook 02 sección 9, Resultados y memoria): cómo se evalúa a un juez decide cuál parece mejor; solo los errores reales miden lo que la app necesita.
 - App: Practicar, «¿Quién corrige?» (5 jueces, el detector entrenado con OMPAL incluido) y Resultados. Local, imagen Docker y Space de Hugging Face con ZeroGPU (`Eskarcho/entrenador-tonos`), funcionando.
-- Memoria: `docs/memoria/` (HTML → PDF con Edge, 19 páginas, figuras de `figuras.py`, capturas de `capturas.py`, referencias verificadas en `sources/`).
+- Memoria: `docs/memoria/` (HTML → PDF con Edge, 20 páginas, figuras de `figuras.py`, capturas de `capturas.py`, referencias verificadas en `sources/`).
 - Calidad: 47 tests, CI en `.github/workflows/ci.yml` (simulado en contenedor; sin probar en GitHub).
 
 ## Sesión del 2026-11-21 (resumen)
@@ -19,10 +19,10 @@ Alineamiento de OMPAL dado por bueno a oído; umbral por partición (`44`); dete
 - OMPAL (17.001 sílabas, 46 alumnos): AUC CNN 0,831 · frase 0,830 · HuBERT 0,859 (HuBERT − CNN +0,028 [0,016; 0,040]). Al 10 % de falsa alarma: 0,52 / 0,49 / 0,53; detector entrenado con alumnos 0,68 (gana en las 5 particiones). Juez de Practicar en habla continua: AUC 0,780 (solo cota).
 
 ## Pendiente para la entrega
-1. Hacer público el Space y comprobarlo sin sesión (cuota de GPU de visitantes anónimos sin probar).
-2. Subir el repo a GitHub (`git remote add origin <url>`, `git push -u origin main`) y ver que el CI pasa.
-3. Revisión de la memoria por la usuaria: fecha de portada (puesta «Noviembre de 2026»), 19 páginas frente a las 20-25 pedidas, captura de Practicar sin resultado (grabar exige micrófono).
-4. Probar la app con micrófono real en Chrome, Firefox y Safari (Safari graba en mp4).
+- Modo juego («Jugar», 2026-11-22): hecho y probado de punta a punta con micrófono simulado en Edge (T2 sobre T2: 100 %; T4 sobre T2: 19 %). Margen bajado a ±1,5 st tras ver que con ±2,5 un T2 a media subida sacaba el 100 %. Memoria actualizada (sección 9 con figura 6, tabla de decisiones, límites, trabajo futuro, resumen, referencia YIN; 20 páginas; apaisada tras la sección 9 y referencias sin salto de página) y captura en `capturas.py` con micrófono simulado. Falta: probarlo con micrófono real en Chrome, Firefox y Safari y volver a desplegar el Space.
+- Subir el repo a GitHub (`git remote add origin <url>`, `git push -u origin main`) y ver que el CI pasa.
+
+Hecho el 2026-11-22 (según la usuaria): Space público comprobado sin sesión, memoria revisada, app probada con micrófono en Chrome, Firefox y Safari.
 
 ## Fuera de alcance (declarado en la memoria)
 Hispanohablantes (camino crítico original, no se pudo grabar), modo juego (D) y motor adaptativo (E), evaluación perceptiva de la voz corregida, consejo de Practicar sin probar con alumnos, ajuste fino de HuBERT y entrenar con errores fabricados midiendo en OMPAL.
